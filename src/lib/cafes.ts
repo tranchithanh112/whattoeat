@@ -1,18 +1,23 @@
-// Real cafés, compiled 2026-09-10 from Vietnamese review listicles:
-//   ticotravel.com.vn/cafe-hai-phong, vinwonders.com  (Hải Phòng)
-//   palatinostudio.com/quan-cafe-dep-o-ha-noi          (Hà Nội)
-//   greensm.com/news/ca-phe-quan-1, noithatanthinhphat.vn (TP.HCM)
+// Cafés for the café picker.
 //
-// Two deliberate limits, because this kind of data ages badly:
-//   * The address is stored for display only. Every "open in Maps" link
-//     searches by NAME + CITY, so a café that moved still resolves, and one
-//     that closed shows as closed rather than sending someone to an address
-//     that is now a phone shop.
-//   * Distance is per AREA, not per café. Accurate coordinates for 74 shops
-//     are not something this project can keep correct, and a district-level
-//     estimate is at least honest about its own precision.
+// Hải Phòng — verified against Google Maps on 2026-09-10, one place at a time.
+// Every row below is open on Maps as of that date, with the address Maps
+// shows and real coordinates (from the Maps listing, or from the place's plus
+// code). Chains list every branch Maps returns. The earlier list, compiled
+// from review sites, had 24 entries: 9 did not exist on Maps, 4 had closed,
+// and several of the rest had the wrong address or name. Wards follow the
+// addresses as Maps now writes them, which is why some read "Gia Viên" or
+// "An Biên" rather than an older district name.
 //
-// Bars and nightlife venues in those lists were left out: the ask was cafés.
+// Vibe tags are carried over from those reviews only for brands they
+// described; cafés added during verification have no tags rather than
+// invented ones, so they simply do not match a vibe filter.
+//
+// Hà Nội and TP.HCM — still compiled from review sites
+//   (palatinostudio.com, greensm.com, noithatanthinhphat.vn), with distance
+//   estimated per district. They have not been checked against Maps.
+//
+// Bars and nightlife venues were left out: the ask was cafés.
 
 export type City = 'hp' | 'hn' | 'hcm';
 export type CafeTag =
@@ -26,9 +31,10 @@ export type Cafe = {
   area: string;
   address: string;
   tags: CafeTag[];
-  /** Approximate km from the city centre, via AREA_KM. */
+  /** Real distance from the city centre when coordinates are known,
+   *  otherwise the per-district estimate from AREA_KM. */
   km: number;
-  custom?: true;
+  coords?: [lat: number, lng: number];
 };
 
 export const CITY_LABEL: Record<City, string> = {
@@ -44,12 +50,16 @@ export const CITY_CENTRE: Record<City, string> = {
   hcm: 'Chợ Bến Thành',
 };
 
-// Rough straight-line distance from each city centre, whole km. Only used to
-// filter by the radius slider.
-const AREA_KM: Record<string, number> = {
-  'Hồng Bàng': 1, 'Ngô Quyền': 2, 'Lê Chân': 3, 'Hải An': 6,
-  'Kiến An': 8, 'Dương Kinh': 9, 'Thuỷ Nguyên': 10, 'Đồ Sơn': 20,
+// Coordinates of those centres, where the city's cafés have coordinates to
+// measure against. Hải Phòng Opera House, 28 Trần Hưng Đạo, from its Maps
+// plus code VM4J+WP.
+const CENTRE_POINT: Partial<Record<City, [number, number]>> = {
+  hp: [20.85731, 106.68181],
+};
 
+// Rough straight-line distance from the centre, whole km, for cafés without
+// coordinates (Hà Nội and TP.HCM only).
+const AREA_KM: Record<string, number> = {
   'Hoàn Kiếm': 1, 'Ba Đình': 3, 'Đống Đa': 4, 'Tây Hồ': 5,
   'Long Biên': 5, 'Thanh Xuân': 7, 'Cầu Giấy': 7, 'Hà Đông': 12,
 
@@ -58,36 +68,68 @@ const AREA_KM: Record<string, number> = {
   'Thủ Đức': 12,
 };
 
-type Row = [id: string, name: string, city: City, area: string, address: string, tags: string];
+function kmBetween([lat1, lng1]: [number, number], [lat2, lng2]: [number, number]): number {
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLng = (lng2 - lng1) * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+
+type Row = [
+  id: string,
+  name: string,
+  city: City,
+  area: string,
+  address: string,
+  tags: string,
+  lat?: number,
+  lng?: number,
+];
 
 const rows: Row[] = [
-  // ---------- Hải Phòng ----------
-  ['no-1986', 'No 1986 Coffee', 'hp', 'Hồng Bàng', '33-35 Đinh Tiên Hoàng', 'photo view'],
-  ['cong-cafe-hp', 'Cộng Cà Phê', 'hp', 'Hồng Bàng', '84 Điện Biên Phủ', 'chain vintage'],
-  ['the-coffee-house-hp', 'The Coffee House', 'hp', 'Hồng Bàng', '86 Điện Biên Phủ', 'chain work'],
-  ['cafe-delices', 'Café Délices', 'hp', 'Hồng Bàng', '43 Điện Biên Phủ', 'view quiet'],
-  ['class-coffee-books', 'Class Coffee and Books', 'hp', 'Hồng Bàng', '178 Phan Bội Châu', 'book quiet work'],
-  ['prince-coffee', 'Prince Coffee', 'hp', 'Hồng Bàng', 'Manhattan 11, Vinhomes Imperia, Thượng Lý', 'photo'],
-  ['mercy-coffee', 'Mercy Coffee and Bread', 'hp', 'Hồng Bàng', 'Manhattan 11, Vinhomes Imperia', 'quiet photo'],
-  ['poppy-premium', 'Poppy Premium', 'hp', 'Ngô Quyền', '2 Lương Khánh Thiện', 'photo'],
-  ['buta-tea', 'Buta Tea & Fruit', 'hp', 'Ngô Quyền', '46 Lương Khánh Thiện', 'photo'],
-  ['maple-cafe', 'Maple Café & Bistro', 'hp', 'Ngô Quyền', '93 Lê Lợi', 'photo quiet'],
-  ['caro-coffee', 'Caro Coffee', 'hp', 'Ngô Quyền', '139 Lê Lợi', 'photo'],
-  ['breath-rooftop', 'Breath', 'hp', 'Ngô Quyền', '89 Lê Lợi', 'rooftop view'],
-  ['vivaria', 'Vivaria Coffee & Trees', 'hp', 'Ngô Quyền', 'Lô 26BC Lê Hồng Phong', 'garden photo'],
-  ['banhs-coffee', 'BANHS Coffee', 'hp', 'Ngô Quyền', '81/384 Lạch Tray', 'garden view'],
-  ['zebee-cafe', 'ZeBee Cafe', 'hp', 'Ngô Quyền', '207 Lạch Tray', 'quiet vintage'],
-  ['bac-viet', 'Bắc Việt Coffee', 'hp', 'Ngô Quyền', '180A Văn Cao', 'vintage'],
-  ['mats-coffee', 'MATs Coffee', 'hp', 'Lê Chân', '27 vòng xoay Hồ Sen', 'view garden'],
-  ['venice-coffee', 'Venice Coffee', 'hp', 'Lê Chân', '274 Lạch Tray', 'quiet photo'],
-  ['am-tea', 'A.M Tea', 'hp', 'Lê Chân', '16/49 Nguyễn Đức Cảnh', 'vintage'],
-  ['palm-coffee', 'Palm Coffee', 'hp', 'Lê Chân', '115 Tô Hiệu, Trại Cau', 'garden photo'],
-  ['miss-coffee', 'Miss Coffee', 'hp', 'Lê Chân', 'KĐT ven sông Lạch Tray', 'view garden'],
-  ['harru-quan', 'Harru Quán', 'hp', 'Hải An', '747 Ngô Gia Tự, Đằng Lâm', 'vintage photo'],
-  ['time-coffee', 'Time Coffee & Bakery', 'hp', 'Hải An', 'Lô 10 Lê Hồng Phong, Đằng Hải', 'vintage work'],
-  ['cung-tram', 'Cung Trầm Cafe', 'hp', 'Hải An', '137 Trung Lực, Đằng Lâm', 'garden quiet'],
+  // ---------- Hải Phòng (Google Maps, 2026-09-10) ----------
+  ['1986-dinh-tien-hoang', '1986 Cafe & Stay', 'hp', 'Hồng Bàng', '33 P. Đinh Tiên Hoàng', 'chain photo view', 20.86094, 106.6824],
+  ['1986-quang-trung', '1986 Café & Bakes', 'hp', 'Hồng Bàng', '11 P. Quang Trung (góc Phan Bội Châu)', 'chain photo', 20.85734, 106.68096],
+  ['1986-ho-xuan-huong', '1986 Cafe & Bakes', 'hp', 'Hồng Bàng', '20 P. Hồ Xuân Hương', 'chain photo', 20.86279, 106.68423],
+  ['1986-tran-phu', '1986 Cafe & Stay', 'hp', 'Ngô Quyền', '1A P. Trần Phú', 'chain photo', 20.86458, 106.68919],
 
-  // ---------- Hà Nội ----------
+  ['kafa-dien-bien-phu', 'KAFA Café', 'hp', 'Hồng Bàng', '27c P. Điện Biên Phủ', 'chain', 20.86133, 106.68665],
+  ['kafa-ho-sen', 'KAFA Café', 'hp', 'Lê Chân', '126 P. Hồ Sen', 'chain', 20.84399, 106.68183],
+  ['kafa-hai-ba-trung', 'KAFA Café', 'hp', 'Lê Chân', '17 P. Hai Bà Trưng', 'chain', 20.85343, 106.68316],
+  ['kafa-le-hong-phong', 'KAFA Café', 'hp', 'Gia Viên', 'Lô 22B Đ. Lê Hồng Phong', 'chain', 20.84828, 106.7057],
+  ['kafa-lach-tray', 'KAFA Café', 'hp', 'Gia Viên', '243A Lạch Tray', 'chain', 20.83301, 106.6978],
+
+  ['bac-viet-tran-hung-dao', 'Cà phê Bắc Việt', 'hp', 'Hồng Bàng', '4a P. Trần Hưng Đạo', 'vintage', 20.8602, 106.68708],
+  ['bac-viet-ha-ly', 'Cafe Bắc Việt', 'hp', 'Hồng Bàng', '39c P. Hạ Lý', 'vintage', 20.86039, 106.67844],
+  ['bac-viet-lach-tray', 'Bắc Việt coffee', 'hp', 'Gia Viên', '215 Lạch Tray', 'vintage', 20.83826, 106.69538],
+  ['bac-viet-aeon', 'Bắc Việt Coffee', 'hp', 'An Biên', 'T1-40, tầng 1 Aeon Mall', 'vintage', 20.8321, 106.68302],
+  // Maps gives this branch only a plus code, no street address or ward.
+  ['bac-viet-vj5r', 'Cafe Bắc Việt coffee', 'hp', 'Hải Phòng', 'Plus code VJ5R+9J3', 'vintage', 20.85835, 106.64156],
+
+  ['cong-van-cao', 'Cộng Cà Phê', 'hp', 'Gia Viên', '178 P. Văn Cao', 'chain vintage', 20.83568, 106.70113],
+  ['tch-tran-phu', 'The Coffee House', 'hp', 'Gia Viên', '15 P. Trần Phú', 'chain work', 20.85909, 106.68747],
+
+  ['caro-coffee', 'Caro Coffee', 'hp', 'Gia Viên', '139 P. Lê Lợi', 'photo', 20.85718, 106.69139],
+  ['breathe', 'Breathe', 'hp', 'Gia Viên', '89 P. Lê Lợi', 'rooftop view', 20.85819, 106.69244],
+  ['maple-cafe', 'Maple Cafe & Bistro', 'hp', 'Lê Chân', '38 P. Mê Linh', 'photo quiet', 20.85381, 106.68006],
+  ['viviria', 'Viviria Coffee', 'hp', 'Gia Viên', 'Số 4B4 Lô 26BC, Đ. Lê Hồng Phong', 'garden photo', 20.85516, 106.69775],
+  ['zebee-cafe', 'Zebee Cafe', 'hp', 'An Biên', 'HD96 Vinhomes Marina, Cầu Rào 2', 'quiet', 20.81964, 106.68689],
+  ['harru-quan', 'Harru Quán', 'hp', 'Hải An', '747 Ngô Gia Tự', 'vintage photo', 20.82969, 106.71881],
+  ['cung-tram', 'Cung Trầm Cafe', 'hp', 'Hải An', '55/135 Trung Lực', 'garden quiet', 20.83381, 106.71056],
+
+  ['muse-coffee', 'Muse Coffee & Pastry', 'hp', 'Hồng Bàng', '61 P. Trần Quang Khải', '', 20.85984, 106.68007],
+  ['tra-cuc-vang', 'Trà Cúc Vàng', 'hp', 'Hồng Bàng', '33 P. Phan Bội Châu', '', 20.85727, 106.68045],
+  ['twinnie', 'Twinnie Coffee Lounge', 'hp', 'Hồng Bàng', '25 P. Phan Bội Châu', '', 20.85729, 106.68062],
+  ['tree-house', 'Tree house coffee', 'hp', 'Gia Viên', '143 Đường bao quanh hồ An Biên', '', 20.8487, 106.69599],
+  ['venus-coffee', 'Venus Coffee', 'hp', 'Gia Viên', 'Lô 6B Đ. Lê Hồng Phong', '', 20.85184, 106.70677],
+  ['vong-coffee', 'Vòng Coffee', 'hp', 'Gia Viên', '15a Đường vòng hồ', '', 20.85124, 106.69366],
+  ['may-tropical', 'May Tropical', 'hp', 'An Biên', 'Đối diện cổng G Aeon Mall', '', 20.83145, 106.67973],
+  ['laban', 'Laban Cafe & Space', 'hp', 'Lê Chân', 'P. Nguyễn Tất Tố', '', 20.82974, 106.68653],
+  ['bana-coffee', 'Ba n’a Coffee', 'hp', 'Hải An', '18 Trung Lực', '', 20.83839, 106.70954],
+
+  // ---------- Hà Nội (review sites, not Maps-verified) ----------
   ['mien-man', 'Miên Man', 'hn', 'Hoàn Kiếm', '3 Ấu Triệu', 'view photo'],
   ['tranquil-books', 'Tranquil Books & Coffee', 'hn', 'Hoàn Kiếm', '5 Nguyễn Quang Bích', 'book quiet work'],
   ['cafe-pho-co', 'Café Phố Cổ', 'hn', 'Hoàn Kiếm', '11 Hàng Gai', 'vintage view rooftop'],
@@ -115,7 +157,7 @@ const rows: Row[] = [
   ['nha-trong-ngo', 'Nhà Trong Ngõ', 'hn', 'Hà Đông', 'Ngõ 23 Nguyễn Khuyến', 'garden quiet'],
   ['cafe-xi-nghiep', 'Cafe Xí Nghiệp', 'hn', 'Hà Đông', '60A TT11 Văn Quán', 'photo work'],
 
-  // ---------- TP.HCM ----------
+  // ---------- TP.HCM (review sites, not Maps-verified) ----------
   ['the-workshop', 'The Workshop Coffee', 'hcm', 'Quận 1', '27 Ngô Đức Kế, Bến Nghé', 'work quiet'],
   ['ca-phe-trung-3t', 'Cà Phê Trứng 3T', 'hcm', 'Quận 1', '1A Tôn Đức Thắng, Bến Nghé', 'vintage'],
   ['little-hanoi-egg', 'Little HaNoi Egg Coffee', 'hcm', 'Quận 1', '212 Lê Lai, Bến Thành', 'vintage'],
@@ -144,22 +186,72 @@ const rows: Row[] = [
   ['bamos-coffee', 'Bamos Coffee', 'hcm', 'Thủ Đức', '9/8 Đường số 10, Bình Khánh', 'garden late'],
 ];
 
-export const cafes: Cafe[] = rows.map(([id, name, city, area, address, tags]) => ({
-  id,
-  name,
-  city,
-  area,
-  address,
-  tags: tags.split(' ') as CafeTag[],
-  // An unmapped area means AREA_KM drifted out of sync; 99 keeps it out of
-  // any sane radius instead of silently pretending it is next door.
-  km: AREA_KM[area] ?? 99,
-}));
+export const cafes: Cafe[] = rows.map(([id, name, city, area, address, tags, lat, lng]) => {
+  const coords: [number, number] | undefined =
+    lat !== undefined && lng !== undefined ? [lat, lng] : undefined;
+  const centre = CENTRE_POINT[city];
+  return {
+    id,
+    name,
+    city,
+    area,
+    address,
+    tags: tags ? (tags.split(' ') as CafeTag[]) : [],
+    km:
+      coords && centre
+        ? Math.round(kmBetween(centre, coords) * 10) / 10
+        : // An unmapped area means AREA_KM drifted; 99 keeps it out of any
+          // sane radius instead of silently pretending it is next door.
+          (AREA_KM[area] ?? 99),
+    coords,
+  };
+});
 
 export const cafeById = new Map(cafes.map((c) => [c.id, c]));
 
-/** Search by name and city, never by the stored address — see the note above. */
+/**
+ * The pool a set of café filters produces. No vibe selected means any café;
+ * otherwise one matching vibe is enough — requiring every selected vibe
+ * empties the pool almost immediately at this catalogue size.
+ */
+export function filterCafes(list: Cafe[], city: City, radiusKm: number, tags: CafeTag[]): Cafe[] {
+  return list.filter(
+    (c) =>
+      c.city === city &&
+      c.km <= radiusKm &&
+      (tags.length === 0 || tags.some((tag) => c.tags.includes(tag))),
+  );
+}
+
+// Card art shows the most characterful vibe a café has, in this order, so a
+// cat café shows a cat rather than the generic cup every chain would get.
+const EMOJI_BY_VIBE: [CafeTag, string][] = [
+  ['pet', '🐱'],
+  ['book', '📚'],
+  ['rooftop', '🏙️'],
+  ['garden', '🌿'],
+  ['view', '🌅'],
+  ['vintage', '📻'],
+  ['work', '💻'],
+  ['late', '🌙'],
+  ['photo', '📸'],
+  ['quiet', '🍃'],
+  ['chain', '🏪'],
+];
+
+export function cafeEmoji(cafe: Cafe): string {
+  return EMOJI_BY_VIBE.find(([tag]) => cafe.tags.includes(tag))?.[1] ?? '☕';
+}
+
+/**
+ * Verified cafés are searched by name AND address: for a chain such as KAFA,
+ * a name-only search opens a list of all five branches instead of the one the
+ * reel picked. Unverified cafés fall back to name + city, which still resolves
+ * if the stored address is stale.
+ */
 export function mapsUrl(cafe: Cafe): string {
-  const where = cafe.custom ? cafe.address : CITY_LABEL[cafe.city];
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cafe.name} ${where}`)}`;
+  const query = cafe.coords
+    ? `${cafe.name} ${cafe.address} ${CITY_LABEL[cafe.city]}`
+    : `${cafe.name} ${CITY_LABEL[cafe.city]}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }

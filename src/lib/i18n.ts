@@ -91,7 +91,7 @@ export const copy = {
     cafeEmpty: 'Không có quán nào khớp. Nới bán kính hoặc bỏ bớt bộ lọc.',
     openMaps: 'Mở Google Maps',
     cafeSource:
-      'Tổng hợp từ các trang review, tháng 9/2026. Địa chỉ chỉ để tham khảo — link Maps tìm theo tên quán nên vẫn đúng kể cả khi quán đổi chỗ.',
+      'Hải Phòng: từng quán đã đối chiếu với Google Maps (9/2026), có toạ độ, khoảng cách thật từ Nhà hát lớn và đủ chi nhánh. Hà Nội, TP.HCM: tổng hợp từ trang review, khoảng cách ước lượng theo quận.',
     cafes: 'quán',
     fromCentre: 'từ',
 
@@ -212,7 +212,7 @@ export const copy = {
     cafeEmpty: 'No café matches. Widen the radius or drop a filter.',
     openMaps: 'Open in Google Maps',
     cafeSource:
-      'Compiled from review sites, September 2026. Addresses are indicative — the Maps link searches by name, so it still resolves if a café moved.',
+      'Hải Phòng: every café checked against Google Maps (Sept 2026), with coordinates, real distance from the Opera House and every branch. Hà Nội, HCMC: compiled from review sites, distance estimated by district.',
     cafes: 'cafés',
     fromCentre: 'from',
 

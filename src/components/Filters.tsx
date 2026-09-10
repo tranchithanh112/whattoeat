@@ -6,6 +6,12 @@ const CUISINES: Cuisine[] = ['vn', 'cn', 'jp', 'kr', 'th', 'sea', 'in', 'mid', '
 const TAGS: Tag[] = ['veg', 'spicy', 'soup', 'dry', 'rice', 'noodle', 'bread', 'grill', 'fried', 'light', 'seafood'];
 const MEALS: (Meal | 'any')[] = ['any', 'sang', 'trua', 'toi'];
 
+// Two labels only this component uses, so they stay out of the shared table.
+const MORE = {
+  vi: { title: 'Bộ lọc nâng cao', active: 'đang bật' },
+  en: { title: 'More filters', active: 'active' },
+} as const;
+
 type Props = {
   prefs: Prefs;
   patch: (next: Partial<Prefs>) => void;
@@ -22,8 +28,21 @@ const toggle = <T,>(list: T[], value: T): T[] =>
 
 export function Filters({ prefs, patch, poolSize, poolAverage, poolKcal, weatherNote, disabled }: Props) {
   const t = copy[prefs.lang];
+  const more = MORE[prefs.lang];
   const clean =
     !prefs.cuisines.length && !prefs.include.length && !prefs.exclude.length && prefs.meal === 'any';
+
+  // Everything under the price ceiling folds away. On a phone the full block
+  // measured 1207px — a screen and a half between the reel and the tabs. It
+  // opens by itself whenever a filter is active, so nothing is ever applied
+  // out of sight.
+  const active =
+    (prefs.kcalCap > 0 ? 1 : 0) +
+    (prefs.noRepeatDays > 0 ? 1 : 0) +
+    (prefs.meal !== 'any' ? 1 : 0) +
+    prefs.cuisines.length +
+    prefs.include.length +
+    prefs.exclude.length;
 
   return (
     <section className="filters" aria-label={t.settings}>
@@ -51,152 +70,165 @@ export function Filters({ prefs, patch, poolSize, poolAverage, poolKcal, weather
             {poolKcal} {t.kcal}
           </small>
         </div>
+        {weatherNote && <small className="hint">{weatherNote}</small>}
       </div>
 
-      <div className="filter-row budget-row">
-        <div className="budget-head">
-          <label htmlFor="kcalcap">{t.kcalCap}</label>
-          <output htmlFor="kcalcap" className="budget-value">
-            {prefs.kcalCap === 0 ? t.kcalCapOff : `${prefs.kcalCap} ${t.kcal}`}
-          </output>
-        </div>
-        <input
-          id="kcalcap"
-          type="range"
-          min={0}
-          max={1200}
-          step={50}
-          value={prefs.kcalCap}
-          disabled={disabled}
-          onChange={(e) => patch({ kcalCap: Number(e.target.value) })}
-        />
-        <div className="budget-foot">
-          <small>{t.kcalApprox}</small>
-          {weatherNote && <small>{weatherNote}</small>}
-        </div>
-      </div>
+      <details className="more-filters" open={active > 0}>
+        <summary>
+          <span>{more.title}</span>
+          {active > 0 && (
+            <span className="more-count">
+              {active} {more.active}
+            </span>
+          )}
+        </summary>
 
-      <div className="filter-row">
-        <span className="filter-label">{t.noRepeat}</span>
-        <div className="segmented" role="group" aria-label={t.noRepeat}>
-          {[0, 3, 7, 14].map((days) => (
-            <button
-              key={days}
-              type="button"
-              className={prefs.noRepeatDays === days ? 'on' : ''}
-              aria-pressed={prefs.noRepeatDays === days}
+        <div className="more-body">
+          <div className="filter-row budget-row">
+            <div className="budget-head">
+              <label htmlFor="kcalcap">{t.kcalCap}</label>
+              <output htmlFor="kcalcap" className="budget-value">
+                {prefs.kcalCap === 0 ? t.kcalCapOff : `${prefs.kcalCap} ${t.kcal}`}
+              </output>
+            </div>
+            <input
+              id="kcalcap"
+              type="range"
+              min={0}
+              max={1200}
+              step={50}
+              value={prefs.kcalCap}
               disabled={disabled}
-              onClick={() => patch({ noRepeatDays: days })}
-            >
-              {days === 0 ? t.noRepeatOff : `${days} ${t.lastDays}`}
-            </button>
-          ))}
-        </div>
-        {prefs.noRepeatDays > 0 && <small className="hint">{t.noRepeatHint}</small>}
-      </div>
+              onChange={(e) => patch({ kcalCap: Number(e.target.value) })}
+            />
+            <div className="budget-foot">
+              <small>{t.kcalApprox}</small>
+            </div>
+          </div>
 
-      <div className="filter-row">
-        <span className="filter-label">{t.meal}</span>
-        <div className="segmented" role="group" aria-label={t.meal}>
-          {MEALS.map((meal) => (
+          <div className="filter-row">
+            <span className="filter-label">{t.noRepeat}</span>
+            <div className="segmented" role="group" aria-label={t.noRepeat}>
+              {[0, 3, 7, 14].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  className={prefs.noRepeatDays === days ? 'on' : ''}
+                  aria-pressed={prefs.noRepeatDays === days}
+                  disabled={disabled}
+                  onClick={() => patch({ noRepeatDays: days })}
+                >
+                  {days === 0 ? t.noRepeatOff : `${days} ${t.lastDays}`}
+                </button>
+              ))}
+            </div>
+            {prefs.noRepeatDays > 0 && <small className="hint">{t.noRepeatHint}</small>}
+          </div>
+
+          <div className="filter-row">
+            <span className="filter-label">{t.meal}</span>
+            <div className="segmented" role="group" aria-label={t.meal}>
+              {MEALS.map((meal) => (
+                <button
+                  key={meal}
+                  type="button"
+                  className={prefs.meal === meal ? 'on' : ''}
+                  aria-pressed={prefs.meal === meal}
+                  disabled={disabled}
+                  onClick={() => patch({ meal })}
+                >
+                  {mealLabel(meal, prefs.lang)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-row">
+            <span className="filter-label">{t.cuisine}</span>
+            <div className="chips">
+              <button
+                type="button"
+                className={`chip ${prefs.cuisines.length === 0 ? 'on' : ''}`}
+                aria-pressed={prefs.cuisines.length === 0}
+                disabled={disabled}
+                onClick={() => patch({ cuisines: [] })}
+              >
+                {t.allCuisines}
+              </button>
+              {CUISINES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`chip ${prefs.cuisines.includes(c) ? 'on' : ''}`}
+                  aria-pressed={prefs.cuisines.includes(c)}
+                  disabled={disabled}
+                  onClick={() => patch({ cuisines: toggle(prefs.cuisines, c) })}
+                >
+                  <span aria-hidden="true">{cuisineLabel[c].flag}</span> {cuisineLabel[c][prefs.lang]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-row">
+            <span className="filter-label">{t.include}</span>
+            <div className="chips">
+              {TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`chip ${prefs.include.includes(tag) ? 'on' : ''}`}
+                  aria-pressed={prefs.include.includes(tag)}
+                  disabled={disabled}
+                  onClick={() =>
+                    patch({
+                      include: toggle(prefs.include, tag),
+                      // A tag cannot be required and excluded at the same time.
+                      exclude: prefs.exclude.filter((x) => x !== tag),
+                    })
+                  }
+                >
+                  <span aria-hidden="true">{tagLabel[tag].icon}</span> {tagLabel[tag][prefs.lang]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-row">
+            <span className="filter-label">{t.exclude}</span>
+            <div className="chips">
+              {TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`chip danger ${prefs.exclude.includes(tag) ? 'on' : ''}`}
+                  aria-pressed={prefs.exclude.includes(tag)}
+                  disabled={disabled}
+                  onClick={() =>
+                    patch({
+                      exclude: toggle(prefs.exclude, tag),
+                      include: prefs.include.filter((x) => x !== tag),
+                    })
+                  }
+                >
+                  <span aria-hidden="true">{tagLabel[tag].icon}</span> {tagLabel[tag][prefs.lang]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {!clean && (
             <button
-              key={meal}
               type="button"
-              className={prefs.meal === meal ? 'on' : ''}
-              aria-pressed={prefs.meal === meal}
+              className="link-button"
               disabled={disabled}
-              onClick={() => patch({ meal })}
+              onClick={() => patch({ cuisines: [], include: [], exclude: [], meal: 'any' })}
             >
-              {mealLabel(meal, prefs.lang)}
+              {t.reset}
             </button>
-          ))}
+          )}
         </div>
-      </div>
-
-      <div className="filter-row">
-        <span className="filter-label">{t.cuisine}</span>
-        <div className="chips">
-          <button
-            type="button"
-            className={`chip ${prefs.cuisines.length === 0 ? 'on' : ''}`}
-            aria-pressed={prefs.cuisines.length === 0}
-            disabled={disabled}
-            onClick={() => patch({ cuisines: [] })}
-          >
-            {t.allCuisines}
-          </button>
-          {CUISINES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`chip ${prefs.cuisines.includes(c) ? 'on' : ''}`}
-              aria-pressed={prefs.cuisines.includes(c)}
-              disabled={disabled}
-              onClick={() => patch({ cuisines: toggle(prefs.cuisines, c) })}
-            >
-              <span aria-hidden="true">{cuisineLabel[c].flag}</span> {cuisineLabel[c][prefs.lang]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="filter-row">
-        <span className="filter-label">{t.include}</span>
-        <div className="chips">
-          {TAGS.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              className={`chip ${prefs.include.includes(tag) ? 'on' : ''}`}
-              aria-pressed={prefs.include.includes(tag)}
-              disabled={disabled}
-              onClick={() =>
-                patch({
-                  include: toggle(prefs.include, tag),
-                  // A tag cannot be required and excluded at the same time.
-                  exclude: prefs.exclude.filter((x) => x !== tag),
-                })
-              }
-            >
-              <span aria-hidden="true">{tagLabel[tag].icon}</span> {tagLabel[tag][prefs.lang]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="filter-row">
-        <span className="filter-label">{t.exclude}</span>
-        <div className="chips">
-          {TAGS.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              className={`chip danger ${prefs.exclude.includes(tag) ? 'on' : ''}`}
-              aria-pressed={prefs.exclude.includes(tag)}
-              disabled={disabled}
-              onClick={() =>
-                patch({
-                  exclude: toggle(prefs.exclude, tag),
-                  include: prefs.include.filter((x) => x !== tag),
-                })
-              }
-            >
-              <span aria-hidden="true">{tagLabel[tag].icon}</span> {tagLabel[tag][prefs.lang]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {!clean && (
-        <button
-          type="button"
-          className="link-button"
-          disabled={disabled}
-          onClick={() => patch({ cuisines: [], include: [], exclude: [], meal: 'any' })}
-        >
-          {t.reset}
-        </button>
-      )}
+      </details>
     </section>
   );
 }

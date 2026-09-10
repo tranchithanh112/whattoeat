@@ -24,6 +24,29 @@ riêng, và **không dùng lại ảnh hay âm thanh của bản gốc**
 - **Chia sẻ** — copy link `?d=<mã-món>` để khoe kết quả, `?room=<mã>` để mời nhóm.
 - **Song ngữ** Việt / English, giao diện sáng / tối, PWA cài được, chạy offline.
 
+## Chế độ Quán cà phê
+
+Nút gạt **🍜 Món ăn / ☕ Quán cà phê** ở đầu trang. Quán cà phê dùng chung reel, âm thanh và nhịp quay với món ăn; thẻ là tách cà phê vẽ bằng CSS có khói bốc lên, emoji đổi theo kiểu quán.
+
+- **Hải Phòng — 32 quán, đối chiếu từng quán với Google Maps (10/09/2026).** Địa chỉ ghi theo Maps, toạ độ thật (lấy từ listing, hoặc giải mã plus code, sai số ≤ 8 m), khoảng cách tính từ Nhà hát lớn. Chuỗi được liệt kê đủ chi nhánh (KAFA ×5, Bắc Việt ×5, 1986 ×4). Link Maps tìm theo tên + địa chỉ nên mở đúng chi nhánh.
+- **Hà Nội, TP.HCM** — tổng hợp từ trang review, chưa đối chiếu Maps; khoảng cách ước lượng theo quận.
+- Lọc theo thành phố, bán kính 1–30 km và kiểu quán.
+
+Danh sách quán sẽ cũ dần theo thời gian. Thấy sai thì sửa trong [`src/lib/cafes.ts`](src/lib/cafes.ts) — test sẽ báo nếu toạ độ Hải Phòng lọt ra ngoài thành phố hoặc một chuỗi bị mất chi nhánh.
+
+## Calo & sổ ăn
+
+- Mỗi món có **kcal ước tính** cho một suất, hiện trên thẻ, kết quả và ảnh chia sẻ. Đây là ước lượng, không phải số liệu dinh dưỡng.
+- **Trần calo** lọc món song song với trần giá.
+- **Sổ calo**: tìm món, thêm theo khẩu phần 0.5×–2×, cộng dồn kcal và tiền, tự reset lúc nửa đêm theo giờ máy. Máy tính **TDEE** (Mifflin-St Jeor) gợi ý mục tiêu — con số trung bình, không phải chỉ định y tế.
+
+## Tuỳ chọn quay khác
+
+- **Không lặp món** — món đã ra trong 3/7/14 ngày gần đây bị hạ 5 lần xác suất, không bị cấm hẳn.
+- **Theo thời tiết** — Open-Meteo, chỉ gửi toạ độ trung tâm thành phố. Trời mưa ưu tiên món nước, nắng nóng ưu tiên món nhẹ.
+- **Lưu ảnh** kết quả khổ 1080×1350 để đăng story.
+- **Bộ lọc nâng cao gập lại** mặc định và tự mở khi có bộ lọc đang bật — trên điện thoại khối lọc rút từ 1207px xuống 239px.
+
 ## Cơ chế quay
 
 Hai bước.
@@ -61,7 +84,7 @@ Cần Node.js 20.19+ (riêng `npm test` dùng type-stripping nên cần Node 22.
 ```sh
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 12 test cho thuật toán chọn món
+npm test           # 26 test: thuật toán chọn món, dữ liệu quán, TDEE
 npm run typecheck
 npm run build      # ra dist/
 npm run preview
@@ -99,7 +122,7 @@ chỉ giữ trong phiên đó.
 | --- | --- | --- |
 | Ảnh món | 0 (CSS + emoji) | ~3.7 MB WebP atlas |
 | Âm thanh | 0 (Web Audio synth) | ~5 MB WAV/MP3 |
-| JS + CSS | ~285 KB (~90 KB gzip) | — |
+| JS + CSS | ~322 KB (~102 KB gzip) | — |
 
 Âm thanh được **tổng hợp** bằng Web Audio API (oscillator + noise buffer) chứ
 không phát file: tick khi thẻ chạy qua vạch, whoosh khi bắt đầu, hợp âm rải khi

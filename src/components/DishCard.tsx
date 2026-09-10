@@ -6,7 +6,7 @@ import { dishName, dishSubtitle, priceLabel, copy, type Lang } from '@/lib/i18n'
 // emoji. That keeps the whole app tiny and free of third-party image rights,
 // and every dish — including ones the user types in — gets art for free.
 
-function hueOf(id: string): number {
+export function hueOf(id: string): number {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
   return h;

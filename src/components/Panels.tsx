@@ -7,15 +7,12 @@ import {
   type CustomDish,
   type Diary,
   type Pool,
-  type Prefs,
   type Spin,
 } from '@/lib/storage';
-import type { Sfx } from '@/lib/audio';
 import { DishCard, Plate } from './DishCard';
-import { CafeTab } from './CafeTab';
 import { DiaryTab } from './DiaryTab';
 
-type Tab = 'catalog' | 'cafe' | 'diary' | 'custom' | 'history' | 'stats' | 'group';
+type Tab = 'catalog' | 'diary' | 'custom' | 'history' | 'stats' | 'group';
 
 type Props = {
   lang: Lang;
@@ -34,9 +31,6 @@ type Props = {
   groupDish: Dish | null;
   onCopyInvite: () => void;
   copyNote: string;
-  prefs: Prefs;
-  patch: (next: Partial<Prefs>) => void;
-  sfx: Sfx;
   diary: Diary;
   setDiary: (next: Diary) => void;
   body: Body;
@@ -125,7 +119,6 @@ export function Panels(props: Props) {
 
   const tabs: [Tab, string][] = [
     ['catalog', t.tabCatalog],
-    ['cafe', t.tabCafe],
     ['diary', t.tabDiary],
     ['custom', t.tabCustom],
     ['history', t.tabHistory],
@@ -197,10 +190,6 @@ export function Panels(props: Props) {
             ))}
           </div>
         </div>
-      )}
-
-      {tab === 'cafe' && (
-        <CafeTab lang={lang} prefs={props.prefs} patch={props.patch} sfx={props.sfx} />
       )}
 
       {tab === 'diary' && (

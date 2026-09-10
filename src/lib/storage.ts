@@ -236,6 +236,14 @@ export function loadDiary(): Diary {
   return { day: raw.day, items };
 }
 
+export type Mode = 'food' | 'cafe';
+
+/** Stored on its own rather than inside Prefs: flipping modes is the most
+ *  frequent write in the app and should not rewrite every preference. */
+export function loadMode(): Mode {
+  return read<unknown>('mode') === 'cafe' ? 'cafe' : 'food';
+}
+
 export const newCustomId = (): string =>
   'c-' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 

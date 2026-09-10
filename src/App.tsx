@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dishes, type Dish } from '@/lib/dishes';
+import { cafes } from '@/lib/cafes';
 import { buildSelector, withinBudget, BUDGET_MEAN_RATIO } from '@/lib/selector';
 import { mulberry32, roomSeed } from '@/lib/rng';
 import { Sfx } from '@/lib/audio';
@@ -12,6 +13,7 @@ import {
   loadBody,
   loadDiary,
   loadHistory,
+  loadMode,
   loadPool,
   loadPrefs,
   newCustomId,
@@ -21,18 +23,27 @@ import {
   type Body,
   type CustomDish,
   type Diary,
+  type Mode,
   type Pool,
   type Prefs,
   type Spin,
 } from '@/lib/storage';
 import { BIAS_TAGS, weatherBias, type WeatherBias } from '@/lib/weather';
 import { Reel, type ReelHandle } from '@/components/Reel';
+import { DishCard } from '@/components/DishCard';
+import { CafeMode } from '@/components/CafeMode';
 import { Filters } from '@/components/Filters';
 import { Panels } from '@/components/Panels';
 import { ResultDialog } from '@/components/ResultDialog';
 
 const toggleIn = (list: string[], id: string) =>
   list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+
+// Two labels used only here, so they stay out of the shared copy table.
+const MODES: { id: Mode; vi: string; en: string; icon: string }[] = [
+  { id: 'food', vi: 'Món ăn', en: 'Food', icon: '🍜' },
+  { id: 'cafe', vi: 'Quán cà phê', en: 'Cafés', icon: '☕' },
+];
 
 export default function App() {
   const [prefs, setPrefs] = useState<Prefs>(defaultPrefs);
@@ -41,6 +52,7 @@ export default function App() {
   const [diary, setDiary] = useState<Diary>(emptyDiary);
   const [body, setBody] = useState<Body>(defaultBody);
   const [weather, setWeather] = useState<WeatherBias | null>(null);
+  const [mode, setMode] = useState<Mode>('food');
   const [ready, setReady] = useState(false);
   const [storageBlocked, setStorageBlocked] = useState(false);
 
@@ -51,7 +63,7 @@ export default function App() {
   const [shareNote, setShareNote] = useState('');
   const [copyNote, setCopyNote] = useState('');
 
-  const reel = useRef<ReelHandle>(null);
+  const reel = useRef<ReelHandle<Dish>>(null);
   const sfx = useMemo(() => new Sfx(), []);
   const t = copy[prefs.lang];
 
@@ -62,6 +74,7 @@ export default function App() {
     setHistory(loadHistory());
     setDiary(loadDiary());
     setBody(loadBody());
+    setMode(loadMode());
     setReady(true);
   }, []);
 
@@ -80,6 +93,9 @@ export default function App() {
   useEffect(() => {
     if (ready && !write('body', body)) setStorageBlocked(true);
   }, [ready, body]);
+  useEffect(() => {
+    if (ready && !write('mode', mode)) setStorageBlocked(true);
+  }, [ready, mode]);
 
   // One anonymous request per city — a fixed centre coordinate, never the
   // user's location. Aborted if the city changes before it lands.
@@ -159,16 +175,23 @@ export default function App() {
   );
 
   // ---- deep links --------------------------------------------------------
+  // Declared after the loading effect, so on mount a link overrides the
+  // stored mode rather than the other way round.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const invited = params.get('room');
     const shared = params.get('d');
+    const wanted = params.get('mode');
+    if (wanted === 'cafe' || wanted === 'food') setMode(wanted);
     if (invited) setRoom(invited.slice(0, 24));
     if (shared) {
       // Resolve against the catalogue only: a link must never be able to
       // inject a dish that is not part of this build.
       const dish = dishes.find((d) => d.id === shared);
-      if (dish) setResult(dish);
+      if (dish) {
+        setMode('food');
+        setResult(dish);
+      }
     }
   }, []);
 
@@ -269,8 +292,10 @@ export default function App() {
     );
   }, [room, copyText]);
 
-  // Space or Enter spins, as long as focus is not inside a control.
+  // Space or Enter spins the dish reel. Café mode registers its own handler
+  // while it is mounted, so each key press drives only the reel on screen.
   useEffect(() => {
+    if (mode !== 'food') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'Space' && e.code !== 'Enter') return;
       const tag = (e.target as HTMLElement | null)?.tagName;
@@ -281,14 +306,14 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [spin]);
+  }, [spin, mode]);
 
   return (
     <div className="shell">
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">
-            🍜
+            {mode === 'cafe' ? '☕' : '🍜'}
           </span>
           <div>
             <strong>{t.brand}</strong>
@@ -329,73 +354,102 @@ export default function App() {
           </p>
         )}
 
-        <Reel handle={reel} lang={prefs.lang} idle={affordable} sfx={sfx} onSpinningChange={setSpinning} />
-
-        <div className="spin-bar">
-          <button type="button" className="spin-button" disabled={spinning || !selector} onClick={spin}>
-            {spinning ? t.spinning : result ? t.spinAgain : t.spin}
-          </button>
-          {result && !spinning && (
-            <button type="button" className="link-button" onClick={() => setResult(result)}>
-              {dishName(result, prefs.lang)} ↗
+        {/* Locked while the dish reel runs: switching would unmount it with the
+            animation still pending and leave the spin button stuck disabled. */}
+        <div className="mode-switch" role="tablist" aria-label={`${MODES[0][prefs.lang]} / ${MODES[1][prefs.lang]}`}>
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="tab"
+              aria-selected={mode === m.id}
+              className={mode === m.id ? 'on' : ''}
+              disabled={spinning}
+              onClick={() => setMode(m.id)}
+            >
+              <span aria-hidden="true">{m.icon}</span> {m[prefs.lang]}
             </button>
-          )}
+          ))}
         </div>
 
-        {!selector && (
-          <p className="banner" role="status">
-            {t.emptyPool}
-          </p>
+        {mode === 'food' ? (
+          <>
+            <Reel
+              handle={reel}
+              idle={affordable}
+              sfx={sfx}
+              onSpinningChange={setSpinning}
+              renderCard={(dish) => <DishCard dish={dish} lang={prefs.lang} />}
+              keyOf={(dish) => dish.id}
+              revealLevel={(dish) => dish.rarity}
+            />
+
+            <div className="spin-bar">
+              <button type="button" className="spin-button" disabled={spinning || !selector} onClick={spin}>
+                {spinning ? t.spinning : result ? t.spinAgain : t.spin}
+              </button>
+              {result && !spinning && (
+                <button type="button" className="link-button" onClick={() => setResult(result)}>
+                  {dishName(result, prefs.lang)} ↗
+                </button>
+              )}
+            </div>
+
+            {!selector && (
+              <p className="banner" role="status">
+                {t.emptyPool}
+              </p>
+            )}
+
+            <Filters
+              prefs={prefs}
+              patch={patch}
+              poolSize={affordable.length}
+              poolAverage={selector?.expectedPrice ?? 0}
+              poolKcal={
+                affordable.length
+                  ? Math.round(affordable.reduce((sum, d) => sum + d.kcal, 0) / affordable.length)
+                  : 0
+              }
+              weatherNote={
+                weather
+                  ? `${weather.kind === 'rain' ? t.weatherRain : weather.kind === 'hot' ? t.weatherHot : t.weatherMild} · ${Math.round(weather.tempC)}°C`
+                  : ''
+              }
+              disabled={spinning}
+            />
+
+            <Panels
+              lang={prefs.lang}
+              all={all}
+              pool={pool}
+              history={history}
+              byId={byId}
+              onToggleFavorite={toggleFavorite}
+              onToggleBlock={toggleBlock}
+              onAddCustom={addCustom}
+              onRemoveCustom={removeCustom}
+              onClearHistory={() => setHistory([])}
+              room={room}
+              onRoomChange={setRoom}
+              onGroupSpin={groupSpin}
+              groupDish={groupDish}
+              onCopyInvite={copyInvite}
+              copyNote={copyNote}
+              diary={diary}
+              setDiary={setDiary}
+              body={body}
+              setBody={setBody}
+            />
+          </>
+        ) : (
+          <CafeMode lang={prefs.lang} prefs={prefs} patch={patch} sfx={sfx} />
         )}
-
-        <Filters
-          prefs={prefs}
-          patch={patch}
-          poolSize={affordable.length}
-          poolAverage={selector?.expectedPrice ?? 0}
-          poolKcal={
-            affordable.length
-              ? Math.round(affordable.reduce((sum, d) => sum + d.kcal, 0) / affordable.length)
-              : 0
-          }
-          weatherNote={
-            weather
-              ? `${weather.kind === 'rain' ? t.weatherRain : weather.kind === 'hot' ? t.weatherHot : t.weatherMild} · ${Math.round(weather.tempC)}°C`
-              : ''
-          }
-          disabled={spinning}
-        />
-
-        <Panels
-          lang={prefs.lang}
-          all={all}
-          pool={pool}
-          history={history}
-          byId={byId}
-          onToggleFavorite={toggleFavorite}
-          onToggleBlock={toggleBlock}
-          onAddCustom={addCustom}
-          onRemoveCustom={removeCustom}
-          onClearHistory={() => setHistory([])}
-          room={room}
-          onRoomChange={setRoom}
-          onGroupSpin={groupSpin}
-          groupDish={groupDish}
-          onCopyInvite={copyInvite}
-          copyNote={copyNote}
-          prefs={prefs}
-          patch={patch}
-          sfx={sfx}
-          diary={diary}
-          setDiary={setDiary}
-          body={body}
-          setBody={setBody}
-        />
       </main>
 
       <footer>
         <span>
-          {t.brand} · {all.length} {t.dishes}
+          {t.brand} · {all.length} {t.dishes} · {cafes.length} {t.cafes}
         </span>
         <span className="muted">
           {prefs.lang === 'vi'
