@@ -1027,6 +1027,58 @@ select {
   min-width: 0;
 }
 
+.cafe-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.cafe-facts div {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.cafe-facts dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cafe-facts dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+}
+
+.cafe-row {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cafe-row.on {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Outside the radius: still browsable, but visibly not in the reel. */
+.cafe-row.is-far {
+  opacity: 0.5;
+}
+
+.row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 /* ---------- mode switch ---------- */
 
 .mode-switch {

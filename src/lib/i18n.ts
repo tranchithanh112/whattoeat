@@ -91,7 +91,7 @@ export const copy = {
     cafeEmpty: 'Không có quán nào khớp. Nới bán kính hoặc bỏ bớt bộ lọc.',
     openMaps: 'Mở Google Maps',
     cafeSource:
-      'Hải Phòng: từng quán đã đối chiếu với Google Maps (9/2026), có toạ độ, khoảng cách thật từ Nhà hát lớn và đủ chi nhánh. Hà Nội, TP.HCM: tổng hợp từ trang review, khoảng cách ước lượng theo quận.',
+      'Cả Hải Phòng, Hà Nội và TP.HCM: từng quán đã đối chiếu với Google Maps (9/2026) — địa chỉ, toạ độ, đánh giá, mức giá và các chi nhánh Maps liệt kê. Khoảng cách đo đường chim bay từ Nhà hát lớn, Hồ Hoàn Kiếm và Chợ Bến Thành.',
     cafes: 'quán',
     fromCentre: 'từ',
 
@@ -212,7 +212,7 @@ export const copy = {
     cafeEmpty: 'No café matches. Widen the radius or drop a filter.',
     openMaps: 'Open in Google Maps',
     cafeSource:
-      'Hải Phòng: every café checked against Google Maps (Sept 2026), with coordinates, real distance from the Opera House and every branch. Hà Nội, HCMC: compiled from review sites, distance estimated by district.',
+      'Hải Phòng, Hà Nội and HCMC: every café checked against Google Maps (Sept 2026) — address, coordinates, rating, price range and the branches Maps lists. Distance is a straight line from the Opera House, Hoàn Kiếm Lake and Bến Thành Market.',
     cafes: 'cafés',
     fromCentre: 'from',
 

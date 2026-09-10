@@ -135,11 +135,10 @@ test('every catalogue dish carries a plausible calorie figure', () => {
   }
 });
 
-test('every café resolves to a known area distance', () => {
-  // 99 is the sentinel for an area missing from AREA_KM, which would silently
-  // hide the café from every radius.
-  const orphans = cafes.filter((c) => c.km === 99).map((c) => `${c.name} (${c.area})`);
-  assert.deepEqual(orphans, []);
+test('every café has a real distance from its city centre', () => {
+  // A bad coordinate gives NaN, and NaN <= radius is false: the café would
+  // silently vanish from every radius.
+  assert.ok(cafes.every((c) => Number.isFinite(c.km)), 'café without a distance');
   assert.ok(cafes.filter((c) => c.city === 'hp').length >= 20, 'Hải Phòng needs a decent list');
   assert.equal(new Set(cafes.map((c) => c.id)).size, cafes.length, 'duplicate café id');
 });

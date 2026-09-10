@@ -28,11 +28,12 @@ riêng, và **không dùng lại ảnh hay âm thanh của bản gốc**
 
 Nút gạt **🍜 Món ăn / ☕ Quán cà phê** ở đầu trang. Quán cà phê dùng chung reel, âm thanh và nhịp quay với món ăn; thẻ là tách cà phê vẽ bằng CSS có khói bốc lên, emoji đổi theo kiểu quán.
 
-- **Hải Phòng — 32 quán, đối chiếu từng quán với Google Maps (10/09/2026).** Địa chỉ ghi theo Maps, toạ độ thật (lấy từ listing, hoặc giải mã plus code, sai số ≤ 8 m), khoảng cách tính từ Nhà hát lớn. Chuỗi được liệt kê đủ chi nhánh (KAFA ×5, Bắc Việt ×5, 1986 ×4). Link Maps tìm theo tên + địa chỉ nên mở đúng chi nhánh.
-- **Hà Nội, TP.HCM** — tổng hợp từ trang review, chưa đối chiếu Maps; khoảng cách ước lượng theo quận.
+- **110 quán, đối chiếu từng quán với Google Maps (10/09/2026)** — Hải Phòng 32, Hà Nội 37, TP.HCM 41. Địa chỉ ghi theo Maps, toạ độ thật (lấy từ listing hoặc giải mã plus code, sai số ≤ 8 m), khoảng cách đường chim bay từ Nhà hát lớn / Hồ Hoàn Kiếm / Chợ Bến Thành. Quán đã đóng hoặc không có trên Maps bị bỏ.
+- **Đủ chi nhánh Maps liệt kê** — KAFA ×5, Bắc Việt ×5, 1986 ×4, Katinat ×7, Tranquil ×3, Cà Phê Trứng 3T ×5, Little HaNoi Egg ×4, Trung Nguyên Legend ×8 (các chi nhánh quanh Quận 1). Reel bốc **thương hiệu trước, chi nhánh sau**, nên chuỗi nhiều chi nhánh không lấn quán lẻ. Link Maps tìm theo tên + địa chỉ nên mở đúng chi nhánh.
+- **Kho quán** — danh sách mọi quán của thành phố đang chọn, tìm không dấu ("bac viet" ra "Bắc Việt"), sắp theo khoảng cách. Bấm một quán để xem địa chỉ, sao và số đánh giá, số chi nhánh, và **mức giá / người theo Google Maps** — chỉ để tham khảo: đó là khoảng Maps ước tính, không phải giá menu. Quán ngoài bán kính vẫn xem được nhưng mờ đi và reel không bốc.
 - Lọc theo thành phố, bán kính 1–30 km và kiểu quán.
 
-Danh sách quán sẽ cũ dần theo thời gian. Thấy sai thì sửa trong [`src/lib/cafes.ts`](src/lib/cafes.ts) — test sẽ báo nếu toạ độ Hải Phòng lọt ra ngoài thành phố hoặc một chuỗi bị mất chi nhánh.
+Danh sách quán sẽ cũ dần theo thời gian. Thấy sai thì sửa trong [`src/lib/cafes.ts`](src/lib/cafes.ts) — test sẽ báo nếu toạ độ lọt ra ngoài thành phố, một chuỗi mất chi nhánh, hoặc mức giá không đúng định dạng Maps.
 
 ## Calo & sổ ăn
 
@@ -84,7 +85,7 @@ Cần Node.js 20.19+ (riêng `npm test` dùng type-stripping nên cần Node 22.
 ```sh
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 26 test: thuật toán chọn món, dữ liệu quán, TDEE
+npm test           # 29 test: thuật toán chọn món, dữ liệu quán, TDEE
 npm run typecheck
 npm run build      # ra dist/
 npm run preview
@@ -122,7 +123,7 @@ chỉ giữ trong phiên đó.
 | --- | --- | --- |
 | Ảnh món | 0 (CSS + emoji) | ~3.7 MB WebP atlas |
 | Âm thanh | 0 (Web Audio synth) | ~5 MB WAV/MP3 |
-| JS + CSS | ~322 KB (~102 KB gzip) | — |
+| JS + CSS | ~334 KB (~106 KB gzip) | — |
 
 Âm thanh được **tổng hợp** bằng Web Audio API (oscillator + noise buffer) chứ
 không phát file: tick khi thẻ chạy qua vạch, whoosh khi bắt đầu, hợp âm rải khi
