@@ -10,7 +10,7 @@ của Nagi / Walter, nhưng viết lại từ đầu: code riêng, nhận diện
 ## Có gì
 
 - **170 món** — Việt, Hoa, Nhật, Hàn, Thái, Đông Nam Á, Ấn, Trung Đông, Âu, Mỹ, Mexico.
-- **Bộ lọc** — mức chi (slider 15–250k), bữa sáng/trưa/tối, vùng ẩm thực, và
+- **Bộ lọc** — trần chi mỗi bữa (slider 15–250k), bữa sáng/trưa/tối, vùng ẩm thực, và
   tag *phải có* / *loại bỏ*: chay, cay, món nước, món khô, cơm, mì/bún, bánh mì,
   nướng, chiên, nhẹ bụng, hải sản.
 - **Yêu thích & chặn** — món yêu thích ra nhiều hơn 3 lần, món bị chặn không bao giờ ra.
@@ -23,17 +23,30 @@ của Nagi / Walter, nhưng viết lại từ đầu: code riêng, nhận diện
 
 ## Cơ chế quay
 
-Không phải random đều. Mỗi món có prior log-normal quanh mốc 50k, rồi cả phân
-phối được "nghiêng" bằng một hệ số duy nhất cho tới khi **kỳ vọng giá đúng bằng
-mức chi bạn chọn**. Đây là phân phối maximum-entropy với ràng buộc trung bình —
-cách ít áp đặt nhất để trúng mức chi mà không phải cắt cứng danh sách món.
+Hai bước.
+
+**1. Trần cứng.** Mức chi bạn đặt là *tối đa*, không phải trung bình. Món đắt
+hơn bị loại khỏi pool trước khi tính trọng số, nên không bao giờ ra. Nếu trần
+thấp hơn mọi món trong pool thì lấy các món rẻ nhất, để reel không rỗng.
+
+**2. Trọng số.** Trong số món còn lại, mỗi món có prior log-normal quanh mốc
+50k, rồi cả phân phối được "nghiêng" bằng một hệ số duy nhất cho tới khi kỳ
+vọng giá bằng **0.8 × trần**. Đây là phân phối maximum-entropy với ràng buộc
+trung bình — cách ít áp đặt nhất để giữ mức chi hợp lý mà không cắt thêm món.
+
+Vì sao nhắm 0.8 × trần chứ không phải đúng trần: nhắm đúng trần sẽ dồn gần hết
+xác suất vào nhúm món có giá đúng bằng trần. Đo thực tế ở trần 100k — nhắm đúng
+trần còn **5** lựa chọn hiệu dụng trên 120 món; nhắm 0.8 × trần được **74**.
 
 Hệ quả:
 
-- Món xa mức chi vẫn có thể ra, chỉ hiếm hơn.
+- Món sát trần vẫn ra được, chỉ hiếm hơn món tầm giữa.
 - Thêm 3 biến thể cùng một mức giá **không** làm mức giá đó ra gấp 3 — prior
   được chia đều theo từng mức giá.
 - Món yêu thích nhân hệ số 3; món bị chặn không vào pool.
+- Không có bộ nhớ giữa các lượt: ra trùng món hai lần liên tiếp là bình thường.
+- Reel chỉ là hoạt hoạ. Kết quả được chốt ngay lúc bấm nút, trước khi thẻ đầu
+  tiên chạy.
 
 Chi tiết trong [`src/lib/selector.ts`](src/lib/selector.ts), test trong
 [`tests/selector.test.mjs`](tests/selector.test.mjs).
@@ -45,7 +58,7 @@ Cần Node.js 20.19+ (riêng `npm test` dùng type-stripping nên cần Node 22.
 ```sh
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 9 test cho thuật toán chọn món
+npm test           # 12 test cho thuật toán chọn món
 npm run typecheck
 npm run build      # ra dist/
 npm run preview

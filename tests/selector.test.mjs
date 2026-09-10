@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSelector, FAVORITE_BOOST } from '../src/lib/selector.ts';
+import {
+  buildSelector,
+  withinBudget,
+  BUDGET_MEAN_RATIO,
+  FAVORITE_BOOST,
+} from '../src/lib/selector.ts';
 import { mulberry32, roomSeed } from '../src/lib/rng.ts';
 
 const dish = (id, price) => ({
@@ -67,6 +72,42 @@ test('sampling converges on the expected price', () => {
 
 test('an empty pool yields no selector', () => {
   assert.equal(buildSelector([], 50), null);
+});
+
+test('the budget is a hard ceiling, never exceeded by a draw', () => {
+  for (const cap of [25, 45, 90, 180]) {
+    const affordable = withinBudget(pool, cap);
+    assert.ok(
+      affordable.every((d) => d.price <= cap),
+      `a dish above ${cap} survived the cap`,
+    );
+    const s = buildSelector(affordable, cap * BUDGET_MEAN_RATIO);
+    const random = mulberry32(7);
+    for (let i = 0; i < 5000; i++) {
+      const drawn = s.pick(random);
+      assert.ok(drawn.price <= cap, `drew ${drawn.price} under a ${cap} cap`);
+    }
+  }
+});
+
+test('a cap under every price falls back to the cheapest dishes', () => {
+  const affordable = withinBudget(pool, 5);
+  assert.deepEqual(
+    affordable.map((d) => d.price),
+    [25],
+  );
+  assert.equal(withinBudget([], 5).length, 0);
+});
+
+test('capping keeps the pool varied instead of collapsing onto the cap', () => {
+  // Aiming the mean at the cap itself puts almost all mass on the dishes
+  // priced exactly there; aiming below it must stay far more spread out.
+  const affordable = withinBudget(pool, 90);
+  const entropy = (s) =>
+    -s.weights.reduce((acc, w) => acc + (w > 0 ? w * Math.log2(w) : 0), 0);
+  const atCap = entropy(buildSelector(affordable, 90));
+  const belowCap = entropy(buildSelector(affordable, 90 * BUDGET_MEAN_RATIO));
+  assert.ok(belowCap > atCap + 1, `entropy ${belowCap} was not clearly above ${atCap}`);
 });
 
 test('a bad draw is rejected rather than silently clamped', () => {

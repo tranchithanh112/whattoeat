@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dishes, type Dish } from '@/lib/dishes';
-import { buildSelector } from '@/lib/selector';
+import { buildSelector, withinBudget, BUDGET_MEAN_RATIO } from '@/lib/selector';
 import { mulberry32, roomSeed } from '@/lib/rng';
 import { Sfx } from '@/lib/audio';
 import { copy, dishName } from '@/lib/i18n';
@@ -101,9 +101,13 @@ export default function App() {
     );
   }, [all, pool.blocked, prefs.meal, prefs.cuisines, prefs.include, prefs.exclude]);
 
+  // The budget caps the pool before anything is weighted, so a dish priced
+  // above it can never be drawn — only then is the mean aimed below the cap.
+  const affordable = useMemo(() => withinBudget(eligible, prefs.budget), [eligible, prefs.budget]);
+
   const selector = useMemo(
-    () => buildSelector(eligible, prefs.budget, favorites),
-    [eligible, prefs.budget, favorites],
+    () => buildSelector(affordable, prefs.budget * BUDGET_MEAN_RATIO, favorites),
+    [affordable, prefs.budget, favorites],
   );
 
   // ---- deep links --------------------------------------------------------
@@ -277,7 +281,7 @@ export default function App() {
           </p>
         )}
 
-        <Reel handle={reel} lang={prefs.lang} idle={eligible} sfx={sfx} onSpinningChange={setSpinning} />
+        <Reel handle={reel} lang={prefs.lang} idle={affordable} sfx={sfx} onSpinningChange={setSpinning} />
 
         <div className="spin-bar">
           <button type="button" className="spin-button" disabled={spinning || !selector} onClick={spin}>
@@ -299,7 +303,7 @@ export default function App() {
         <Filters
           prefs={prefs}
           patch={patch}
-          poolSize={eligible.length}
+          poolSize={affordable.length}
           poolAverage={selector?.expectedPrice ?? 0}
           disabled={spinning}
         />

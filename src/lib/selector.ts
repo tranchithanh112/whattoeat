@@ -19,6 +19,24 @@ const ANCHOR = 50;
 const LOG_SPREAD = 0.42;
 export const FAVORITE_BOOST = 3;
 
+// The budget is a ceiling, not an average. Aiming the mean at the ceiling
+// itself would collapse the draw onto the handful of dishes priced exactly
+// there (measured: 5 effective choices out of 120 at a 100k cap), so the
+// mean is aimed below it and the spread fills the range underneath.
+export const BUDGET_MEAN_RATIO = 0.8;
+
+/**
+ * Dishes a given budget can actually pay for. If the cap is under every
+ * price in the pool the cheapest dishes are returned anyway — an empty reel
+ * is a worse answer than an honest "this is the closest you can get".
+ */
+export function withinBudget<T extends { price: number }>(pool: T[], cap: number): T[] {
+  const within = pool.filter((d) => d.price <= cap);
+  if (within.length || !pool.length) return within;
+  const cheapest = Math.min(...pool.map((d) => d.price));
+  return pool.filter((d) => d.price === cheapest);
+}
+
 export type Selector = {
   pool: Dish[];
   weights: number[];
