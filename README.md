@@ -1,11 +1,14 @@
-# Trưa nay ăn gì 🍜
+# whattoeat 🍜
 
-Quay ngẫu nhiên món ăn theo mức chi, bữa, vùng ẩm thực và khẩu vị. Không tài
+**https://whattoeatvn.vercel.app**
+
+Quay ngẫu nhiên món ăn theo trần chi, bữa, vùng ẩm thực và khẩu vị. Không tài
 khoản, không backend, không gọi API — mọi thứ chạy trong trình duyệt.
 
 Lấy cảm hứng từ [truanayangi](https://github.com/truanayangi-com/truanayangi)
-của Nagi / Walter, nhưng viết lại từ đầu: code riêng, nhận diện riêng, và
-**không dùng lại ảnh hay âm thanh của bản gốc** (xem [Bản quyền](#bản-quyền)).
+của Nagi / Walter, nhưng viết lại từ đầu: code riêng, tên riêng, nhận diện
+riêng, và **không dùng lại ảnh hay âm thanh của bản gốc**
+(xem [Bản quyền](#bản-quyền)).
 
 ## Có gì
 

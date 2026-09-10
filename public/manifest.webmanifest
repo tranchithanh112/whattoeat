@@ -1,7 +1,7 @@
 {
-  "name": "Trưa nay ăn gì",
-  "short_name": "Ăn gì",
-  "description": "Quay ngẫu nhiên món ăn theo mức chi, bữa và khẩu vị.",
+  "name": "whattoeat",
+  "short_name": "whattoeat",
+  "description": "Quay ngẫu nhiên món ăn theo trần chi, bữa và khẩu vị.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

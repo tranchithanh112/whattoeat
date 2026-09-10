@@ -4,7 +4,9 @@ export type Lang = 'vi' | 'en';
 
 export const copy = {
   vi: {
-    brand: 'Trưa nay ăn gì',
+    // The brand is a name, not a phrase: it stays identical in both
+    // languages. Only the tagline is translated.
+    brand: 'whattoeat',
     tagline: 'Hết phân vân trong 8 giây',
     spin: 'CHỐT MÓN',
     spinning: 'ĐANG CHỌN…',
@@ -71,7 +73,7 @@ export const copy = {
     tiers: ['Bình dân', 'Quen thuộc', 'Đáng thử', 'Sang chảnh', 'Chiêu đãi'],
   },
   en: {
-    brand: 'What to eat',
+    brand: 'whattoeat',
     tagline: 'Stop deciding. Start eating.',
     spin: 'PICK ONE',
     spinning: 'PICKING…',

@@ -5,7 +5,7 @@
 // browser only installs a new worker when these bytes change, and only a new
 // worker runs `activate` — so a fixed name means stale entries are never
 // collected, and every deploy leaves another dead bundle behind.
-const CACHE = 'tnag-v2';
+const CACHE = 'tnag-v3';
 const SHELL = ['/', '/index.html', '/icon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
