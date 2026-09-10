@@ -1,14 +1,19 @@
 // Sound is synthesised, not sampled. The reference build shipped several MB
-// of game audio; these few oscillators cost nothing to download, work
-// offline, and carry no third-party rights.
+// of game audio; these oscillators cost nothing to download, work offline,
+// and carry no third-party rights.
+//
+// The palette is a canteen rather than a slot machine: struck ceramic for
+// every event. A bowl rings with inharmonic partials — unlike a chord, the
+// overtones are not whole-number multiples — so a plain sine reads as a beep
+// while these ratios read as crockery. Each strike also gets a few
+// milliseconds of filtered noise, which is the sound of the two surfaces
+// actually meeting; without it the ring sounds synthetic.
 
-const RARITY_CHORDS: number[][] = [
-  [523.25, 659.25], // everyday     C5 E5
-  [523.25, 659.25, 783.99], // familiar     C5 E5 G5
-  [587.33, 739.99, 880.0], // worth a try  D5 F#5 A5
-  [523.25, 659.25, 783.99, 1046.5], // fancy        C5 E5 G5 C6
-  [523.25, 698.46, 880.0, 1174.66, 1396.91], // treat        C5 F5 A5 D6 F6
-];
+const BOWL = [1, 2.31, 4.28, 6.61];
+
+/** Bowl sizes the reel cycles through, so a fast reel clatters instead of
+ *  ticking like a metronome. */
+const BOWL_SIZES = [1180, 1560, 2040, 1360, 1820];
 
 export class Sfx {
   private ctx: AudioContext | null = null;
@@ -18,6 +23,7 @@ export class Sfx {
   /** Ticks fire once per card crossing the marker; on a fast reel that is
    *  dozens per second, so they are rate-limited rather than queued. */
   private lastTick = 0;
+  private bowlIndex = 0;
 
   /** Must run inside a user gesture — browsers refuse to start audio otherwise. */
   unlock(): void {
@@ -56,7 +62,9 @@ export class Sfx {
     this.noise = null;
   }
 
-  /** One click as a card passes the marker. `heat` (0..1) rises as the reel slows. */
+  /** One bowl knocking against the next as a card passes the marker.
+   *  `heat` (0..1) rises as the reel slows: strikes get heavier and duller,
+   *  like a stack settling. */
   tick(heat = 0): void {
     const ctx = this.ready();
     if (!ctx) return;
@@ -64,87 +72,105 @@ export class Sfx {
     if (now - this.lastTick < 0.022) return;
     this.lastTick = now;
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1500 + heat * 900, now);
-    osc.frequency.exponentialRampToValueAtTime(700, now + 0.03);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.16 + heat * 0.1, now + 0.004);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-    osc.connect(gain).connect(this.master!);
-    osc.start(now);
-    osc.stop(now + 0.06);
+    // Walk the bowl sizes with a random skip so the pattern never locks into
+    // an audible loop, and detune each strike a little.
+    this.bowlIndex = (this.bowlIndex + 1 + Math.floor(Math.random() * 2)) % BOWL_SIZES.length;
+    const size = BOWL_SIZES[this.bowlIndex] * (0.92 + Math.random() * 0.16);
+
+    this.strike(ctx, now, size * (1 - heat * 0.18), 0.13 + heat * 0.07, 0.1 + heat * 0.06, 3);
   }
 
-  /** Filtered-noise whoosh as the reel launches. */
+  /** A stack of bowls being shuffled on a steel table as the reel launches. */
   open(): void {
     const ctx = this.ready();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    const src = ctx.createBufferSource();
-    src.buffer = this.noiseBuffer(ctx);
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.Q.value = 1.1;
-    filter.frequency.setValueAtTime(260, now);
-    filter.frequency.exponentialRampToValueAtTime(2600, now + 0.42);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.09);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-    src.connect(filter).connect(gain).connect(this.master!);
-    src.start(now);
-    src.stop(now + 0.6);
+    for (let i = 0; i < 7; i++) {
+      const at = now + i * 0.045 + Math.random() * 0.02;
+      const size = BOWL_SIZES[i % BOWL_SIZES.length] * (0.85 + Math.random() * 0.3);
+      this.strike(ctx, at, size, 0.11, 0.13, 3);
+    }
 
-    const thump = ctx.createOscillator();
-    const thumpGain = ctx.createGain();
-    thump.type = 'sine';
-    thump.frequency.setValueAtTime(150, now);
-    thump.frequency.exponentialRampToValueAtTime(48, now + 0.24);
-    thumpGain.gain.setValueAtTime(0.34, now);
-    thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-    thump.connect(thumpGain).connect(this.master!);
-    thump.start(now);
-    thump.stop(now + 0.32);
+    // The table underneath: a short low thud so the clatter has a body.
+    const thud = ctx.createOscillator();
+    const gain = ctx.createGain();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(190, now);
+    thud.frequency.exponentialRampToValueAtTime(62, now + 0.22);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+    thud.connect(gain).connect(this.master!);
+    thud.start(now);
+    thud.stop(now + 0.32);
   }
 
-  /** Arpeggio on reveal; longer and brighter the rarer the dish. */
+  /**
+   * Chopsticks running up the rims of bowls, longer the rarer the dish.
+   * The top tier gets a bright two-note flourish on the end — the joke being
+   * that an expensive dish sounds like a till.
+   */
   reveal(rarity: number): void {
     const ctx = this.ready();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const chord = RARITY_CHORDS[Math.min(rarity, RARITY_CHORDS.length - 1)];
 
-    chord.forEach((freq, i) => {
-      const at = now + i * 0.075;
+    const notes = 2 + Math.min(rarity, 3);
+    for (let i = 0; i < notes; i++) {
+      // Rising, because a run that climbs reads as a reward in any culture.
+      const freq = 900 * Math.pow(1.26, i);
+      this.strike(ctx, now + i * 0.085, freq, 0.21, 0.42, 4);
+    }
+
+    if (rarity >= 4) {
+      const at = now + notes * 0.085 + 0.05;
+      this.strike(ctx, at, 2640, 0.24, 0.5, 4);
+      this.strike(ctx, at + 0.07, 3520, 0.21, 0.7, 4);
+    }
+  }
+
+  /**
+   * One struck-ceramic hit: inharmonic partials over a noise contact
+   * transient. `partials` trades realism for node count — the reel fires
+   * these dozens of times a second, the reveal only a handful.
+   */
+  private strike(
+    ctx: AudioContext,
+    at: number,
+    freq: number,
+    level: number,
+    decay: number,
+    partials: number,
+  ): void {
+    for (let i = 0; i < partials; i++) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = rarity >= 3 ? 'triangle' : 'sine';
-      osc.frequency.setValueAtTime(freq, at);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq * BOWL[i], at);
+      // Higher partials are quieter and die first, which is what makes a
+      // strike sound struck rather than simply switched on.
+      const amp = level / (i + 1.6);
+      const life = decay / (1 + i * 0.55);
       gain.gain.setValueAtTime(0.0001, at);
-      gain.gain.exponentialRampToValueAtTime(0.22, at + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.75);
+      gain.gain.exponentialRampToValueAtTime(amp, at + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + life);
       osc.connect(gain).connect(this.master!);
       osc.start(at);
-      osc.stop(at + 0.8);
-    });
-
-    if (rarity >= 3) {
-      // A shimmer tail marks the rare drops without another sample.
-      const src = ctx.createBufferSource();
-      src.buffer = this.noiseBuffer(ctx);
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.value = 5200;
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.14, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
-      src.connect(filter).connect(gain).connect(this.master!);
-      src.start(now);
-      src.stop(now + 0.95);
+      osc.stop(at + life + 0.02);
     }
+
+    const contact = ctx.createBufferSource();
+    contact.buffer = this.noiseBuffer(ctx);
+    contact.playbackRate.value = 1 + Math.random() * 0.4;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = Math.min(freq * 1.7, 7000);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(level * 0.55, at);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.02);
+    contact.connect(filter).connect(gain).connect(this.master!);
+    contact.start(at);
+    contact.stop(at + 0.03);
   }
 
   private ready(): AudioContext | null {
@@ -154,7 +180,9 @@ export class Sfx {
 
   private noiseBuffer(ctx: AudioContext): AudioBuffer {
     if (!this.noise) {
-      const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      // A quarter second is plenty: contact transients are ~20 ms and the
+      // playback rate is jittered, so no repeat is audible.
+      const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.25), ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
       this.noise = buffer;
