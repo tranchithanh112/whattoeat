@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Trưa nay ăn gì — Hết phân vân trong 8 giây</title>
+    <meta
+      name="description"
+      content="Quay ngẫu nhiên món ăn theo mức chi, bữa, vùng ẩm thực và khẩu vị. 170+ món, lọc chay/cay/nước-khô, lưu yêu thích, quay nhóm. Không cần tài khoản."
+    />
+    <meta name="theme-color" content="#14110f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fbf6ee" media="(prefers-color-scheme: light)" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Trưa nay ăn gì" />
+    <meta
+      property="og:description"
+      content="Hết phân vân trong 8 giây. 170+ món, lọc theo mức chi và khẩu vị."
+    />
+    <script>
+      // Apply the saved theme before first paint so the page never flashes
+      // the wrong background.
+      try {
+        var saved = JSON.parse(localStorage.getItem('tnag.v2.prefs') || '{}');
+        if (saved.theme === 'light' || saved.theme === 'dark') {
+          document.documentElement.dataset.theme = saved.theme;
+        }
+        if (saved.lang === 'en' || saved.lang === 'vi') document.documentElement.lang = saved.lang;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Trang này cần JavaScript để quay món.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

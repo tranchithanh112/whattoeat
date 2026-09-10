@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Trua nay an gi">
+  <defs>
+    <linearGradient id="bowl" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0a13a" />
+      <stop offset="1" stop-color="#e2593f" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#14110f" />
+  <path d="M10 31h44a22 22 0 0 1-44 0Z" fill="url(#bowl)" />
+  <path d="M7 31h50" stroke="#f5ece1" stroke-width="3" stroke-linecap="round" />
+  <path
+    d="M22 23c0-5 4-6 4-10M32 23c0-5 4-6 4-10M42 23c0-5 4-6 4-10"
+    stroke="#f0a13a"
+    stroke-width="3"
+    stroke-linecap="round"
+    fill="none"
+    opacity=".85"
+  />
+</svg>
