@@ -4,7 +4,7 @@
 
 :root {
   --card-w: 164px;
-  --card-h: 232px; /* card width + 12px gap must equal STEP in components/Reel.tsx */
+  --card-h: 250px; /* card width + 12px gap must equal STEP in components/Reel.tsx */
 
   --bg: #14110f;
   --bg-2: #1b1613;
@@ -929,6 +929,80 @@ footer {
 
 .muted {
   color: var(--muted);
+}
+
+/* ---------- calories, cafés ---------- */
+
+.card-kcal {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.danger-text {
+  color: var(--accent-2);
+}
+
+.meter {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.25s ease;
+}
+
+.meter span.over {
+  background: var(--accent-2);
+}
+
+select {
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+}
+
+.chip.static {
+  cursor: default;
+  border-color: var(--line);
+}
+
+.cafe-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  background: var(--bg-2);
+}
+
+/* While flickering through candidates the card should read as unsettled,
+   not as an answer someone might act on. */
+.cafe-result.is-picking {
+  opacity: 0.55;
+}
+
+.cafe-result strong {
+  font-size: 20px;
+}
+
+.cafe-where,
+.cafe-meta {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 /* ---------- responsive ---------- */

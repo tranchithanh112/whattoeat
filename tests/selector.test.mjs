@@ -5,7 +5,11 @@ import {
   withinBudget,
   BUDGET_MEAN_RATIO,
   FAVORITE_BOOST,
+  REPEAT_DAMP,
 } from '../src/lib/selector.ts';
+import { dishes } from '../src/lib/dishes.ts';
+import { cafes } from '../src/lib/cafes.ts';
+import { tdee } from '../src/lib/tdee.ts';
 import { mulberry32, roomSeed } from '../src/lib/rng.ts';
 
 const dish = (id, price) => ({
@@ -114,6 +118,38 @@ test('a bad draw is rejected rather than silently clamped', () => {
   const s = buildSelector(pool, 50);
   assert.throws(() => s.pick(() => 1), /\[0, 1\)/);
   assert.throws(() => s.pick(() => NaN), /\[0, 1\)/);
+});
+
+test('a recently drawn dish is damped, not banned', () => {
+  const twins = [dish('fresh', 50), dish('justHad', 50), dish('cheap', 30), dish('rich', 90)];
+  const s = buildSelector(twins, 50, new Set(), new Set(['justHad']));
+  const ratio = s.weightOf.get('justHad') / s.weightOf.get('fresh');
+  assert.ok(Math.abs(ratio - REPEAT_DAMP) < 1e-6, `expected ${REPEAT_DAMP}x, got ${ratio}`);
+  assert.ok(s.weightOf.get('justHad') > 0, 'a damped dish must stay reachable');
+});
+
+test('every catalogue dish carries a plausible calorie figure', () => {
+  for (const d of dishes) {
+    assert.ok(Number.isFinite(d.kcal), `${d.id} has no kcal`);
+    assert.ok(d.kcal >= 150 && d.kcal <= 1200, `${d.id} kcal ${d.kcal} is out of range`);
+  }
+});
+
+test('every café resolves to a known area distance', () => {
+  // 99 is the sentinel for an area missing from AREA_KM, which would silently
+  // hide the café from every radius.
+  const orphans = cafes.filter((c) => c.km === 99).map((c) => `${c.name} (${c.area})`);
+  assert.deepEqual(orphans, []);
+  assert.ok(cafes.filter((c) => c.city === 'hp').length >= 20, 'Hải Phòng needs a decent list');
+  assert.equal(new Set(cafes.map((c) => c.id)).size, cafes.length, 'duplicate café id');
+});
+
+test('TDEE follows Mifflin-St Jeor', () => {
+  // 10*70 + 6.25*175 - 5*30 + 5 = 1648.75 BMR, x1.55 = 2555.6 -> 2556
+  const value = tdee({ sex: 'm', age: 30, height: 175, weight: 70, activity: 1.55, target: 0 });
+  assert.equal(value, 2556);
+  const female = tdee({ sex: 'f', age: 30, height: 175, weight: 70, activity: 1.55, target: 0 });
+  assert.ok(female < value, 'the female constant must lower the estimate');
 });
 
 test('the same room and day pick the same dish', () => {

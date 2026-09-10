@@ -42,6 +42,11 @@ export const DishCard = memo(function DishCard({ dish, lang, size = 'md', favori
       <div className="card-copy">
         <strong>{dishName(dish, lang)}</strong>
         <span>{size === 'sm' ? priceLabel(dish.price, lang, true) : dishSubtitle(dish, lang)}</span>
+        {size !== 'sm' && (
+          <span className="card-kcal" title={t.kcalApprox}>
+            ~{dish.kcal} {t.kcal} · {priceLabel(dish.price, lang, true)}
+          </span>
+        )}
       </div>
     </>
   );

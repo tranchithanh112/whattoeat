@@ -1,10 +1,21 @@
 import { useMemo, useState } from 'react';
 import type { Dish } from '@/lib/dishes';
 import { copy, dishName, priceLabel, type Lang } from '@/lib/i18n';
-import { MAX_CUSTOM, type CustomDish, type Pool, type Spin } from '@/lib/storage';
+import {
+  MAX_CUSTOM,
+  type Body,
+  type CustomDish,
+  type Diary,
+  type Pool,
+  type Prefs,
+  type Spin,
+} from '@/lib/storage';
+import type { Sfx } from '@/lib/audio';
 import { DishCard, Plate } from './DishCard';
+import { CafeTab } from './CafeTab';
+import { DiaryTab } from './DiaryTab';
 
-type Tab = 'catalog' | 'custom' | 'history' | 'stats' | 'group';
+type Tab = 'catalog' | 'cafe' | 'diary' | 'custom' | 'history' | 'stats' | 'group';
 
 type Props = {
   lang: Lang;
@@ -23,6 +34,13 @@ type Props = {
   groupDish: Dish | null;
   onCopyInvite: () => void;
   copyNote: string;
+  prefs: Prefs;
+  patch: (next: Partial<Prefs>) => void;
+  sfx: Sfx;
+  diary: Diary;
+  setDiary: (next: Diary) => void;
+  body: Body;
+  setBody: (next: Body) => void;
 };
 
 const DAY = 86_400_000;
@@ -98,13 +116,17 @@ export function Panels(props: Props) {
       setFormError(lang === 'vi' ? `Tối đa ${MAX_CUSTOM} món.` : `Up to ${MAX_CUSTOM} dishes.`);
       return;
     }
-    props.onAddCustom({ vi: clean, price: value, veg, emoji: emoji || '🍽️' });
+    // No kcal field: asking for a calorie count is a worse trade than a rough
+    // guess from price, and the diary lets it be corrected by portion size.
+    props.onAddCustom({ vi: clean, price: value, veg, emoji: emoji || '🍽️', kcal: Math.round(value * 7) });
     setName('');
     setFormError('');
   }
 
   const tabs: [Tab, string][] = [
     ['catalog', t.tabCatalog],
+    ['cafe', t.tabCafe],
+    ['diary', t.tabDiary],
     ['custom', t.tabCustom],
     ['history', t.tabHistory],
     ['stats', t.tabStats],
@@ -175,6 +197,22 @@ export function Panels(props: Props) {
             ))}
           </div>
         </div>
+      )}
+
+      {tab === 'cafe' && (
+        <CafeTab lang={lang} prefs={props.prefs} patch={props.patch} sfx={props.sfx} />
+      )}
+
+      {tab === 'diary' && (
+        <DiaryTab
+          lang={lang}
+          all={all}
+          byId={byId}
+          diary={props.diary}
+          setDiary={props.setDiary}
+          body={props.body}
+          setBody={props.setBody}
+        />
       )}
 
       {tab === 'custom' && (

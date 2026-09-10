@@ -18,6 +18,9 @@ import type { Dish } from './dishes';
 const ANCHOR = 50;
 const LOG_SPREAD = 0.42;
 export const FAVORITE_BOOST = 3;
+/** A dish eaten recently is damped, never banned — sometimes you do want it
+ *  again, and banning outright would quietly shrink a small pool to nothing. */
+export const REPEAT_DAMP = 0.2;
 
 // The budget is a ceiling, not an average. Aiming the mean at the ceiling
 // itself would collapse the draw onto the handful of dishes priced exactly
@@ -49,6 +52,7 @@ export function buildSelector(
   pool: Dish[],
   targetPrice: number,
   favorites: ReadonlySet<string> = new Set(),
+  recent: ReadonlySet<string> = new Set(),
 ): Selector | null {
   if (!pool.length) return null;
   if (pool.some((d) => !Number.isFinite(d.price) || d.price <= 0)) {
@@ -70,7 +74,8 @@ export function buildSelector(
     const shape = -0.5 * (logs[i] / LOG_SPREAD) ** 2;
     const spread = -Math.log(perPrice.get(d.price)!);
     const boost = favorites.has(d.id) ? Math.log(FAVORITE_BOOST) : 0;
-    return shape + spread + boost;
+    const damp = recent.has(d.id) ? Math.log(REPEAT_DAMP) : 0;
+    return shape + spread + boost + damp;
   });
 
   const weightsAt = (tilt: number) => {

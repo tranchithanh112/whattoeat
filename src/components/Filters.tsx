@@ -11,6 +11,8 @@ type Props = {
   patch: (next: Partial<Prefs>) => void;
   poolSize: number;
   poolAverage: number;
+  poolKcal: number;
+  weatherNote: string;
   disabled: boolean;
 };
 
@@ -18,7 +20,7 @@ type Props = {
 const toggle = <T,>(list: T[], value: T): T[] =>
   list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 
-export function Filters({ prefs, patch, poolSize, poolAverage, disabled }: Props) {
+export function Filters({ prefs, patch, poolSize, poolAverage, poolKcal, weatherNote, disabled }: Props) {
   const t = copy[prefs.lang];
   const clean =
     !prefs.cuisines.length && !prefs.include.length && !prefs.exclude.length && prefs.meal === 'any';
@@ -45,9 +47,52 @@ export function Filters({ prefs, patch, poolSize, poolAverage, disabled }: Props
         <div className="budget-foot">
           <small>{t.budgetHint}</small>
           <small>
-            {poolSize} {t.dishes} · {t.poolAverage} {priceLabel(poolAverage, prefs.lang, true)}
+            {poolSize} {t.dishes} · {t.poolAverage} {priceLabel(poolAverage, prefs.lang, true)} · ~
+            {poolKcal} {t.kcal}
           </small>
         </div>
+      </div>
+
+      <div className="filter-row budget-row">
+        <div className="budget-head">
+          <label htmlFor="kcalcap">{t.kcalCap}</label>
+          <output htmlFor="kcalcap" className="budget-value">
+            {prefs.kcalCap === 0 ? t.kcalCapOff : `${prefs.kcalCap} ${t.kcal}`}
+          </output>
+        </div>
+        <input
+          id="kcalcap"
+          type="range"
+          min={0}
+          max={1200}
+          step={50}
+          value={prefs.kcalCap}
+          disabled={disabled}
+          onChange={(e) => patch({ kcalCap: Number(e.target.value) })}
+        />
+        <div className="budget-foot">
+          <small>{t.kcalApprox}</small>
+          {weatherNote && <small>{weatherNote}</small>}
+        </div>
+      </div>
+
+      <div className="filter-row">
+        <span className="filter-label">{t.noRepeat}</span>
+        <div className="segmented" role="group" aria-label={t.noRepeat}>
+          {[0, 3, 7, 14].map((days) => (
+            <button
+              key={days}
+              type="button"
+              className={prefs.noRepeatDays === days ? 'on' : ''}
+              aria-pressed={prefs.noRepeatDays === days}
+              disabled={disabled}
+              onClick={() => patch({ noRepeatDays: days })}
+            >
+              {days === 0 ? t.noRepeatOff : `${days} ${t.lastDays}`}
+            </button>
+          ))}
+        </div>
+        {prefs.noRepeatDays > 0 && <small className="hint">{t.noRepeatHint}</small>}
       </div>
 
       <div className="filter-row">

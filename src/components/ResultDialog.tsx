@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Dish } from '@/lib/dishes';
 import { copy, dishName, dishSubtitle, priceLabel, quipFor, type Lang } from '@/lib/i18n';
+import { saveShareImage } from '@/lib/shareImage';
 import { Plate } from './DishCard';
 
 type Props = {
@@ -49,7 +50,8 @@ export function ResultDialog({
           <h2>{dishName(dish, lang)}</h2>
           <p className="result-sub">{dishSubtitle(dish, lang)}</p>
           <p className="result-price">
-            {t.referencePrice} · <strong>{priceLabel(dish.price, lang, true)}</strong> {t.perPerson}
+            {t.referencePrice} · <strong>{priceLabel(dish.price, lang, true)}</strong> {t.perPerson} · ~
+            <strong>{dish.kcal}</strong> {t.kcal}
           </p>
           <p className="result-quip">{quipFor(dish, lang)}</p>
 
@@ -89,6 +91,9 @@ export function ResultDialog({
             </button>
             <button type="button" onClick={onShare}>
               ↗ {shareNote || t.share}
+            </button>
+            <button type="button" onClick={() => void saveShareImage(dish, lang)}>
+              🖼 {t.saveImage}
             </button>
           </div>
 

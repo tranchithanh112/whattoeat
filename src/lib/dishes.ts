@@ -20,6 +20,8 @@ export type Dish = {
   tags: Tag[];
   meals: Meal[];
   rarity: number;
+  /** Rough kcal for one typical portion — see KCAL. */
+  kcal: number;
   custom?: true;
 };
 
@@ -218,6 +220,70 @@ const rows: Row[] = [
   ['nachos', 'Nachos', 'Nachos', 110, '🧀', 'mx', 'spicy fried', 'toi'],
 ];
 
+// Rough kcal for one typical portion as served in Vietnam, kept in a separate
+// map so the rows above stay readable. These are estimates, not nutrition
+// data: the same dish varies hugely by shop, by how much fat and rice ends up
+// in the bowl, and by whether you finish the broth. The UI labels them
+// approximate everywhere they appear, and they should never be treated as a
+// medical or dietary reference.
+const KCAL: Record<string, number> = {
+  'com-tam': 620, 'pho-bo': 480, 'pho-ga': 430, 'pho-cuon': 350, 'pho-chay': 350,
+  'banh-mi': 400, 'banh-mi-op-la': 480, 'banh-mi-chao': 650, 'banh-mi-chay': 330,
+  'bun-cha': 620, 'bun-bo-hue': 550, 'bun-rieu': 450, 'bun-thit-nuong': 520,
+  'bun-dau': 700, 'bun-ca': 430, 'bun-moc': 450, 'bun-mang-vit': 480,
+  'bun-bo-nam-bo': 480, 'bun-mam': 520, 'bun-chay': 380, 'hu-tieu': 420,
+  'hu-tieu-nam-vang': 480, 'mi-quang': 500, 'banh-canh-cua': 450,
+  'banh-canh-gio-heo': 520, 'banh-canh-ghe': 480, 'banh-da-cua': 500,
+  'mien-ga': 400, 'mien-luon': 450, 'mien-xao': 520, 'mi-cua': 520,
+  'mi-tom-trung': 450, 'mi-xao-bo': 550, 'nui-xao-bo': 560, 'banh-cuon': 350,
+  'banh-uot-thit-nuong': 420, 'banh-xeo': 600, 'banh-beo': 300,
+  'banh-bot-loc': 320, 'banh-gio': 300, 'banh-hoi-heo-quay': 550,
+  'nem-nuong': 520, 'goi-cuon': 300, 'goi-cuon-chay': 260, 'chao-suon': 320,
+  'chao-ga': 350, 'chao-vit': 420, 'chao-long': 400, 'chao-hai-san': 380,
+  'xoi-man': 550, 'xoi-ga': 520, 'com-ga-hoi-an': 600, 'com-ga-xoi-mo': 750,
+  'com-ga-nuong-mat-ong': 650, 'com-binh-dan': 650, 'com-rang-dua-bo': 620,
+  'com-suon-nuong': 700, 'com-cha-ca': 600, 'com-hen': 450, 'com-chay': 500,
+  'com-tam-chay': 520, 'com-cari-chay': 600, 'thit-kho-trung': 650,
+  'ga-kho-gung': 600, 'ca-kho-to': 580, 'canh-chua-ca': 450, 'bo-luc-lac': 700,
+  'bo-ne': 750, 'bo-kho': 600, 'bo-nuong-la-lot': 550, 'ga-nuong-com-lam': 750,
+  'lau-bo-ca-nhan': 700, 'lau-ca-keo': 650, 'lau-nam-chay': 450,
+  'mi-nam-chay': 420, 'salad-dau-hu': 350, 'oc-luoc': 300,
+
+  'com-xa-xiu': 650, 'com-vit-quay': 750, 'mi-xa-xiu': 520, 'mi-hoanh-thanh': 480,
+  'mi-vit-tiem': 620, 'mi-bo-dai-loan': 600, 'mi-xao-gion': 700,
+  'com-chien-hai-san': 700, 'com-ga-hai-nam': 680, dimsum: 550,
+
+  ramen: 600, udon: 480, 'udon-xao': 620, soba: 420, 'sushi-ca-hoi': 400,
+  sashimi: 350, 'com-ca-ri-nhat': 750, gyudon: 700, oyakodon: 680, katsudon: 850,
+  tendon: 800, 'unagi-don': 750, 'saba-don': 650, 'salmon-teriyaki': 700,
+  'com-ga-teriyaki': 680, bento: 700, okonomiyaki: 600, sukiyaki: 800,
+
+  bibimbap: 600, kimbap: 400, tteokbokki: 500, 'mi-cay-han': 650,
+  jajangmyeon: 700, naengmyeon: 500, 'mi-tron-han': 600, 'kimchi-jjigae': 550,
+  sundubu: 500, 'ga-pho-mai-han': 900, 'com-chien-kimchi': 600,
+  'com-bo-nuong-han': 750, 'com-suon-cay-han': 750,
+
+  'pad-thai': 650, 'mi-tom-yum': 550, 'com-ca-ri-thai': 700,
+  'com-ga-som-tam': 650, 'lau-thai': 650, 'com-nieu-singapore': 700,
+  'chao-ech': 600, laksa: 600, 'nasi-goreng': 650, satay: 600,
+  'mi-tron-indomie': 500,
+
+  'ca-ri-an-do': 850, biryani: 800, 'tikka-masala': 780, falafel: 600,
+  shawarma: 600, 'banh-mi-kebab': 500, 'hummus-bowl': 500,
+
+  'pizza-pho-mai': 800, 'pizza-pepperoni': 900, 'pizza-hai-san': 850,
+  'mi-y-bo-bam': 650, carbonara: 800, 'pesto-pasta': 700, 'mi-y-ca-hoi': 750,
+  'mi-y-hai-san': 700, lasagna: 750, risotto: 700, gnocchi: 650,
+  'fish-and-chips': 900, 'bo-bit-tet': 700, 'ca-hoi-ap-chao': 550,
+  'ga-nuong-khoai-tay': 750, 'salad-uc-ga': 400, 'salad-ca-ngu': 420,
+  'salad-quinoa': 450, 'buddha-bowl': 500,
+
+  'suon-bbq': 950, 'burger-bo': 600, 'burger-pho-mai': 900, 'burger-ga': 800,
+  'ga-ran': 700, 'mac-and-cheese': 750, hotdog: 400, sandwich: 400,
+  'club-sandwich': 600, 'chicken-wrap': 550, 'poke-ca-hoi': 550, burrito: 800,
+  taco: 600, quesadilla: 700, nachos: 700,
+};
+
 export const dishes: Dish[] = rows.map(([id, vi, en, price, emoji, cuisine, tags, meals]) => ({
   id,
   vi,
@@ -228,6 +294,9 @@ export const dishes: Dish[] = rows.map(([id, vi, en, price, emoji, cuisine, tags
   tags: tags ? (tags.split(' ') as Tag[]) : [],
   meals: meals.split(' ') as Meal[],
   rarity: priceRarity(price),
+  // A missing entry means the KCAL table drifted out of sync with the rows;
+  // fall back to a price-based guess rather than rendering NaN.
+  kcal: KCAL[id] ?? Math.round(price * 7),
 }));
 
 export const dishById = new Map(dishes.map((d) => [d.id, d]));

@@ -5,8 +5,12 @@ import { mulberry32, roomSeed } from '@/lib/rng';
 import { Sfx } from '@/lib/audio';
 import { copy, dishName } from '@/lib/i18n';
 import {
+  defaultBody,
   defaultPrefs,
+  emptyDiary,
   emptyPool,
+  loadBody,
+  loadDiary,
   loadHistory,
   loadPool,
   loadPrefs,
@@ -14,11 +18,14 @@ import {
   toDish,
   write,
   MAX_HISTORY,
+  type Body,
   type CustomDish,
+  type Diary,
   type Pool,
   type Prefs,
   type Spin,
 } from '@/lib/storage';
+import { BIAS_TAGS, weatherBias, type WeatherBias } from '@/lib/weather';
 import { Reel, type ReelHandle } from '@/components/Reel';
 import { Filters } from '@/components/Filters';
 import { Panels } from '@/components/Panels';
@@ -31,6 +38,9 @@ export default function App() {
   const [prefs, setPrefs] = useState<Prefs>(defaultPrefs);
   const [pool, setPool] = useState<Pool>(emptyPool);
   const [history, setHistory] = useState<Spin[]>([]);
+  const [diary, setDiary] = useState<Diary>(emptyDiary);
+  const [body, setBody] = useState<Body>(defaultBody);
+  const [weather, setWeather] = useState<WeatherBias | null>(null);
   const [ready, setReady] = useState(false);
   const [storageBlocked, setStorageBlocked] = useState(false);
 
@@ -50,6 +60,8 @@ export default function App() {
     setPrefs(loadPrefs());
     setPool(loadPool());
     setHistory(loadHistory());
+    setDiary(loadDiary());
+    setBody(loadBody());
     setReady(true);
   }, []);
 
@@ -62,6 +74,20 @@ export default function App() {
   useEffect(() => {
     if (ready && !write('history', history)) setStorageBlocked(true);
   }, [ready, history]);
+  useEffect(() => {
+    if (ready && !write('diary', diary)) setStorageBlocked(true);
+  }, [ready, diary]);
+  useEffect(() => {
+    if (ready && !write('body', body)) setStorageBlocked(true);
+  }, [ready, body]);
+
+  // One anonymous request per city — a fixed centre coordinate, never the
+  // user's location. Aborted if the city changes before it lands.
+  useEffect(() => {
+    const stop = new AbortController();
+    void weatherBias(prefs.city, stop.signal).then(setWeather);
+    return () => stop.abort();
+  }, [prefs.city]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -94,20 +120,42 @@ export default function App() {
     return all.filter(
       (d) =>
         !blocked.has(d.id) &&
+        (prefs.kcalCap === 0 || d.kcal <= prefs.kcalCap) &&
         (prefs.meal === 'any' || d.meals.includes(prefs.meal)) &&
         (prefs.cuisines.length === 0 || prefs.cuisines.includes(d.cuisine)) &&
         prefs.include.every((tag) => d.tags.includes(tag)) &&
         !prefs.exclude.some((tag) => d.tags.includes(tag)),
     );
-  }, [all, pool.blocked, prefs.meal, prefs.cuisines, prefs.include, prefs.exclude]);
+  }, [all, pool.blocked, prefs.kcalCap, prefs.meal, prefs.cuisines, prefs.include, prefs.exclude]);
+
+  // Dishes drawn inside the no-repeat window get damped in the weighting.
+  const recent = useMemo(() => {
+    if (!prefs.noRepeatDays) return new Set<string>();
+    const since = Date.now() - prefs.noRepeatDays * 86_400_000;
+    return new Set(history.filter((h) => h.at >= since).map((h) => h.id));
+  }, [history, prefs.noRepeatDays]);
+
+  // Weather nudges through the same boost channel as favourites: on a rainy
+  // day every soupy dish is temporarily as likely as a favourite. Reusing the
+  // one mechanism keeps a second tuning knob out of the selector.
+  const boosted = useMemo(() => {
+    const set = new Set(favorites);
+    const tags = weather ? BIAS_TAGS[weather.kind] : [];
+    if (tags.length) {
+      for (const dish of all) {
+        if (tags.some((tag) => dish.tags.includes(tag))) set.add(dish.id);
+      }
+    }
+    return set;
+  }, [favorites, weather, all]);
 
   // The budget caps the pool before anything is weighted, so a dish priced
   // above it can never be drawn — only then is the mean aimed below the cap.
   const affordable = useMemo(() => withinBudget(eligible, prefs.budget), [eligible, prefs.budget]);
 
   const selector = useMemo(
-    () => buildSelector(affordable, prefs.budget * BUDGET_MEAN_RATIO, favorites),
-    [affordable, prefs.budget, favorites],
+    () => buildSelector(affordable, prefs.budget * BUDGET_MEAN_RATIO, boosted, recent),
+    [affordable, prefs.budget, boosted, recent],
   );
 
   // ---- deep links --------------------------------------------------------
@@ -305,6 +353,16 @@ export default function App() {
           patch={patch}
           poolSize={affordable.length}
           poolAverage={selector?.expectedPrice ?? 0}
+          poolKcal={
+            affordable.length
+              ? Math.round(affordable.reduce((sum, d) => sum + d.kcal, 0) / affordable.length)
+              : 0
+          }
+          weatherNote={
+            weather
+              ? `${weather.kind === 'rain' ? t.weatherRain : weather.kind === 'hot' ? t.weatherHot : t.weatherMild} · ${Math.round(weather.tempC)}°C`
+              : ''
+          }
           disabled={spinning}
         />
 
@@ -325,6 +383,13 @@ export default function App() {
           groupDish={groupDish}
           onCopyInvite={copyInvite}
           copyNote={copyNote}
+          prefs={prefs}
+          patch={patch}
+          sfx={sfx}
+          diary={diary}
+          setDiary={setDiary}
+          body={body}
+          setBody={setBody}
         />
       </main>
 
