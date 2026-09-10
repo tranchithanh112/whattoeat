@@ -13,6 +13,11 @@ createRoot(document.getElementById('root')!).render(
 // first paint, and a failure is not worth surfacing to the user.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js').catch(() => {});
+    void navigator.serviceWorker
+      .register('/sw.js')
+      // Check for a newer worker on every load. Without this a long-lived
+      // tab can stay on an old worker for a full day.
+      .then((registration) => registration.update())
+      .catch(() => {});
   });
 }

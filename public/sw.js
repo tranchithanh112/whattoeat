@@ -1,7 +1,11 @@
 // Minimal offline cache. Hand-written rather than generated: the app is one
 // HTML file plus two hashed bundles, which is not worth a build plugin.
 
-const CACHE = 'tnag-v1';
+// Bump this on any release that must not be served from an old cache. The
+// browser only installs a new worker when these bytes change, and only a new
+// worker runs `activate` — so a fixed name means stale entries are never
+// collected, and every deploy leaves another dead bundle behind.
+const CACHE = 'tnag-v2';
 const SHELL = ['/', '/index.html', '/icon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
